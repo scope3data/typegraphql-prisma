@@ -27,16 +27,30 @@ export default function generateRelationsResolverClassesFromModel(
   generatorOptions: GeneratorOptions,
 ) {
   const rootArgName = camelCase(model.typeName);
-  const singleIdField = model.fields.find(field => field.isId);
-  const singleUniqueField = model.fields.find(field => field.isUnique);
+
+  // Create field cache for fast lookups
+  const fieldsCache = new Map<string, any>();
+  let singleIdField: any = undefined;
+  let singleUniqueField: any = undefined;
+
+  model.fields.forEach(field => {
+    fieldsCache.set(field.name, field);
+    if (field.isId && !singleIdField) {
+      singleIdField = field;
+    }
+    if (field.isUnique && !singleUniqueField) {
+      singleUniqueField = field;
+    }
+  });
+
   const singleFilterField = singleIdField ?? singleUniqueField;
   const compositeIdFields =
     model.primaryKey?.fields.map(
-      idField => model.fields.find(field => idField === field.name)!,
+      idField => fieldsCache.get(idField)!,
     ) ?? [];
   const compositeUniqueFields = model.uniqueIndexes[0]
     ? model.uniqueIndexes[0].fields.map(
-        uniqueField => model.fields.find(field => uniqueField === field.name)!,
+        uniqueField => fieldsCache.get(uniqueField)!,
       )
     : [];
   const compositeFilterFields =

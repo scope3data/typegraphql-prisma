@@ -1,9 +1,10 @@
-import { EnumMemberStructure, OptionalKind, Project } from "ts-morph";
-import path from "path";
+import path from "node:path";
+
+import type { EnumMemberStructure, OptionalKind, Project } from "ts-morph";
 
 import { generateTypeGraphQLImport } from "./imports";
 import { enumsFolderName } from "./config";
-import { DMMF } from "./dmmf/types";
+import type { DMMF } from "./dmmf/types";
 import { convertNewLines } from "./helpers";
 
 export default function generateEnumFromDef(

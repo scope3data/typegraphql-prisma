@@ -56,7 +56,7 @@ export default function generateObjectTypeClassFromModel(
       .map(field => field.type),
   );
 
-  const countField = modelOutputType.fields.find(it => it.name === "_count");
+  const countField = dmmfDocument.getOutputTypeField(modelOutputType.name, "_count");
   const shouldEmitCountField =
     countField !== undefined &&
     dmmfDocument.shouldGenerateBlock("crudResolvers");

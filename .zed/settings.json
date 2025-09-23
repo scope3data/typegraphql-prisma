@@ -1,0 +1,58 @@
+{
+  "format_on_save": "on",
+  "lsp": {
+    "vtsls": {
+      "settings": {
+        "typescript": {
+          "tsserver": {
+            "maxTsServerMemory": 16184,
+            "watchOptions": {
+              "watchFile": "useFsEvents",
+              "watchDirectory": "useFsEvents",
+              "fallbackPolling": "dynamicPriority",
+              "synchronousWatchDirectory": true,
+              "excludeDirectories": ["**/node_modules", "**/.git"]
+            }
+          },
+          "preferences": {
+            "includePackageJsonAutoImports": "off"
+          }
+        },
+        "javascript": {
+          "tsserver": {
+            "maxTsServerMemory": 16184,
+            "watchOptions": {
+              "watchFile": "useFsEvents",
+              "watchDirectory": "useFsEvents",
+              "fallbackPolling": "dynamicPriority",
+              "synchronousWatchDirectory": true,
+              "excludeDirectories": ["**/node_modules", "**/.git"]
+            }
+          },
+          "preferences": {
+            "includePackageJsonAutoImports": "off"
+          }
+        }
+      }
+    }
+  },
+  "languages": {
+    "JavaScript": {
+      "formatter": { "language_server": { "name": "prettier" } }
+    },
+    "TypeScript": {
+      "show_edit_predictions": true,
+      "language_servers": ["!typescript-language-server", "vtsls", "..."],
+      "formatter": { "language_server": { "name": "prettier" } }
+    },
+    "TSX": {
+      "show_edit_predictions": true,
+      "language_servers": ["!typescript-language-server", "vtsls", "..."],
+      "formatter": { "language_server": { "name": "prettier" } }
+    },
+    "JSON": { "formatter": { "language_server": { "name": "prettier" } } },
+    "JSONC": { "formatter": { "language_server": { "name": "prettier" } } },
+    "CSS": { "formatter": { "language_server": { "name": "prettier" } } },
+    "GraphQL": { "formatter": { "language_server": { "name": "prettier" } } }
+  }
+}

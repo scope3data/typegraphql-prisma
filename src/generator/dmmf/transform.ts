@@ -10,9 +10,9 @@ import {
   pascalCase,
   cleanDocsString,
 } from "../helpers";
-import { DmmfDocument } from "./dmmf-document";
+import type { DmmfDocument } from "./dmmf-document";
 import pluralize from "pluralize";
-import { GeneratorOptions } from "../options";
+import type { GeneratorOptions } from "../options";
 import {
   supportedQueryActions,
   supportedMutationActions,
@@ -23,14 +23,8 @@ export function transformSchema(
   datamodel: PrismaDMMF.Schema,
   dmmfDocument: DmmfDocument,
 ): Omit<DMMF.Schema, "enums"> {
-  const inputObjectTypes = [
-    ...(datamodel.inputObjectTypes.prisma ?? []),
-    ...(datamodel.inputObjectTypes.model ?? []),
-  ];
-  const outputObjectTypes = [
-    ...(datamodel.outputObjectTypes.prisma ?? []),
-    ...(datamodel.outputObjectTypes.model ?? []),
-  ];
+  const inputObjectTypes = (datamodel.inputObjectTypes.prisma ?? []).concat(datamodel.inputObjectTypes.model ?? []);
+  const outputObjectTypes = (datamodel.outputObjectTypes.prisma ?? []).concat(datamodel.outputObjectTypes.model ?? []);
   return {
     inputTypes: inputObjectTypes
       .filter(uncheckedScalarInputsFilter(dmmfDocument))
@@ -155,7 +149,7 @@ function transformInputType(dmmfDocument: DmmfDocument) {
   return (inputType: PrismaDMMF.InputType): DMMF.InputType => {
     const modelName = getModelNameFromInputType(inputType.name);
     const modelType = modelName
-      ? dmmfDocument.datamodel.models.find(it => it.name === modelName)
+      ? dmmfDocument.modelsCache.get(modelName)
       : undefined;
     return {
       ...inputType,
@@ -163,9 +157,7 @@ function transformInputType(dmmfDocument: DmmfDocument) {
       fields: inputType.fields
         .filter(field => field.deprecation === undefined)
         .map<DMMF.SchemaArg>(field => {
-          const modelField = modelType?.fields.find(
-            it => it.name === field.name,
-          );
+          const modelField = modelType ? dmmfDocument.getModelField(modelType.name, field.name) : undefined;
           const typeName = modelField?.typeFieldAlias ?? field.name;
           const selectedInputType = selectInputTypeFromTypes(dmmfDocument)(
             field.inputTypes,
@@ -281,51 +273,67 @@ function transformOutputType(dmmfDocument: DmmfDocument) {
   };
 }
 
+// Cache for mapped output type names to avoid repeated string operations
+const outputTypeNameCache = new Map<string, string>();
+
+// Pre-compiled suffixes for O(1) lookup
+const DEDICATED_TYPE_SUFFIXES = [
+  "CountAggregateOutputType",
+  "MinAggregateOutputType",
+  "MaxAggregateOutputType",
+  "AvgAggregateOutputType",
+  "SumAggregateOutputType",
+  "GroupByOutputType",
+  "CountOutputType",
+] as const;
+
 export function getMappedOutputTypeName(
   dmmfDocument: DmmfDocument,
   outputTypeName: string,
 ): string {
-  if (outputTypeName.startsWith("Aggregate")) {
-    const modelTypeName = dmmfDocument.getModelTypeName(
-      outputTypeName.replace("Aggregate", ""),
-    );
-    return `Aggregate${modelTypeName}`;
+  // Check cache first for O(1) lookup
+  const cached = outputTypeNameCache.get(outputTypeName);
+  if (cached !== undefined) {
+    return cached;
   }
 
-  if (
+  let result: string;
+
+  if (outputTypeName.startsWith("Aggregate")) {
+    const modelTypeName = dmmfDocument.getModelTypeName(
+      outputTypeName.slice(9), // "Aggregate".length = 9
+    );
+    result = `Aggregate${modelTypeName}`;
+  } else if (
     outputTypeName.startsWith("CreateMany") &&
     outputTypeName.endsWith("AndReturnOutputType")
   ) {
-    const modelTypeName = dmmfDocument.getModelTypeName(
-      outputTypeName
-        .replace("CreateMany", "")
-        .replace("AndReturnOutputType", ""),
+    const modelName = outputTypeName.slice(10, -19); // Remove "CreateMany" and "AndReturnOutputType"
+    const modelTypeName = dmmfDocument.getModelTypeName(modelName);
+    result = `CreateManyAndReturn${modelTypeName}`;
+  } else if (dmmfDocument.isModelName(outputTypeName)) {
+    const _result = dmmfDocument.getModelTypeName(outputTypeName);
+    if (_result) {
+      result = _result;
+    } else {
+      throw new Error(`Model type not found for ${outputTypeName}`);
+    }
+  } else {
+    const dedicatedTypeSuffix = DEDICATED_TYPE_SUFFIXES.find(suffix =>
+      outputTypeName.endsWith(suffix)
     );
-    return `CreateManyAndReturn${modelTypeName}`;
+    if (dedicatedTypeSuffix) {
+      const modelName = outputTypeName.slice(0, -dedicatedTypeSuffix.length);
+      const operationName = dedicatedTypeSuffix.replace("OutputType", "");
+      result = `${dmmfDocument.getModelTypeName(modelName)}${operationName}`;
+    } else {
+      result = outputTypeName;
+    }
   }
 
-  if (dmmfDocument.isModelName(outputTypeName)) {
-    return dmmfDocument.getModelTypeName(outputTypeName)!;
-  }
-
-  const dedicatedTypeSuffix = [
-    "CountAggregateOutputType",
-    "MinAggregateOutputType",
-    "MaxAggregateOutputType",
-    "AvgAggregateOutputType",
-    "SumAggregateOutputType",
-    "GroupByOutputType",
-    "CountOutputType",
-  ].find(type => outputTypeName.includes(type));
-  if (dedicatedTypeSuffix) {
-    const modelName = outputTypeName.replace(dedicatedTypeSuffix, "");
-    const operationName = outputTypeName
-      .replace(modelName, "")
-      .replace("OutputType", "");
-    return `${dmmfDocument.getModelTypeName(modelName)}${operationName}`;
-  }
-
-  return outputTypeName;
+  // Cache the result for future lookups
+  outputTypeNameCache.set(outputTypeName, result);
+  return result;
 }
 
 function transformMapping(
@@ -335,9 +343,12 @@ function transformMapping(
   return (mapping: PrismaDMMF.ModelMapping): DMMF.ModelMapping => {
     const { model: modelName, ...availableActions } = mapping;
     const modelTypeName = dmmfDocument.getModelTypeName(modelName) ?? modelName;
-    const model = dmmfDocument.datamodel.models.find(
-      it => it.name === modelName,
-    )!;
+
+    const model = dmmfDocument.modelsCache.get(modelName);
+    if (!model) {
+      throw new Error(`Cannot find model ${modelName} in root types definitions!`);
+    }
+
     const actions = (
       Object.entries(availableActions)
         .sort(([a], [b]) => a.localeCompare(b))
@@ -347,17 +358,19 @@ function transformMapping(
         ) as [string, string][]
     ).map<DMMF.Action>(([modelAction, fieldName]) => {
       const kind = modelAction as DMMF.ModelAction;
-      const actionOutputType = dmmfDocument.schema.outputTypes.find(type =>
-        type.fields.some(field => field.name === fieldName),
-      );
+
+      const actionOutputType = dmmfDocument.findOutputTypeWithField(fieldName);
       if (!actionOutputType) {
         throw new Error(
           `Cannot find type with field ${fieldName} in root types definitions!`,
         );
       }
-      const method = actionOutputType.fields.find(
-        field => field.name === fieldName,
-      )!;
+
+      const method = dmmfDocument.getOutputTypeField(actionOutputType.name, fieldName);
+      if (!method) {
+        throw new Error(`Method not found for ${fieldName}`);
+      }
+
       const argsTypeName =
         method.args.length > 0
           ? getMappedArgsTypeName(kind, modelTypeName)
@@ -383,11 +396,16 @@ function transformMapping(
         modelTypeName,
       );
 
+      const operationKind = getOperationKindName(kind);
+      if (!operationKind) {
+        throw new Error(`Cannot find operation kind for ${kind}`);
+      }
+
       return {
         name: getMappedActionName(kind, modelTypeName, model.plural, options),
         fieldName,
         kind: kind,
-        operation: getOperationKindName(kind)!,
+        operation: operationKind,
         prismaMethod: getPrismaMethodName(kind),
         method,
         argsTypeName,
@@ -578,9 +596,7 @@ export function transformEnums(dmmfDocument: DmmfDocument) {
 
 export function generateRelationModel(dmmfDocument: DmmfDocument) {
   return (model: DMMF.Model): DMMF.RelationModel => {
-    const outputType = dmmfDocument.schema.outputTypes.find(
-      type => type.name === model.name,
-    )!;
+    const outputType = dmmfDocument.outputTypeCache.get(model.name)!;
     const resolverName = `${model.typeName}RelationsResolver`;
     const relationFields = model.fields
       .filter(
@@ -590,9 +606,7 @@ export function generateRelationModel(dmmfDocument: DmmfDocument) {
           outputType.fields.some(it => it.name === field.name),
       )
       .map<DMMF.RelationField>(field => {
-        const outputTypeField = outputType.fields.find(
-          it => it.name === field.name,
-        )!;
+        const outputTypeField = dmmfDocument.getOutputTypeField(outputType.name, field.name)!;
         const argsTypeName =
           outputTypeField.args.length > 0
             ? `${model.typeName}${pascalCase(field.name)}Args`
