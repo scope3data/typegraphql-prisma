@@ -1,6 +1,7 @@
 import path from "node:path";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
+import { performance } from "node:perf_hooks";
 
 import type { DMMF as PrismaDMMF } from "@prisma/generator-helper";
 import { Project, ScriptTarget, ModuleKind, type CompilerOptions } from "ts-morph";
@@ -51,6 +52,7 @@ import { generateCustomScalars } from "./generate-scalars";
 import { generateHelpersFile } from "./generate-helpers";
 import type { DMMF } from "./dmmf/types";
 import { getBlocksToEmit } from "./emit-block";
+import type { MetricsListener } from "./metrics";
 
 const execa = promisify(exec);
 
@@ -64,12 +66,14 @@ const baseCompilerOptions: CompilerOptions = {
 };
 
 class CodeGenerator {
+  constructor(private metrics?: MetricsListener) {}
 
   async generate(
     dmmf: PrismaDMMF.Document,
     baseOptions: InternalGeneratorOptions & ExternalGeneratorOptions,
     log: (msg: string) => void = noop,
   ): Promise<void> {
+    const startTime = performance.now();
     ensureInstalledCorrectPrismaPackage();
 
     const options: GeneratorOptions = Object.assign({}, baseOptions, {
@@ -83,7 +87,7 @@ class CodeGenerator {
         baseOptions.prismaClientPath.includes("node_modules")
           ? "@prisma/client"
           : undefined,
-      formatGeneratedCode: baseOptions.formatGeneratedCode ?? "tsc",
+      formatGeneratedCode: baseOptions.formatGeneratedCode ?? false,
     });
 
     const baseDirPath = options.outputDirPath;
@@ -99,11 +103,14 @@ class CodeGenerator {
     });
 
     log("Transforming dmmfDocument...");
+    const dmmfStart = performance.now();
     const dmmfDocument = new DmmfDocument(dmmf, options);
+    this.metrics?.emitMetric('dmmf-document-creation', performance.now() - dmmfStart);
 
     // Generate enums
     if (dmmfDocument.shouldGenerateBlock("enums")) {
       log("Generating enums...");
+      const enumStart = performance.now();
       const allEnums = dmmfDocument.datamodel.enums.concat(
         dmmfDocument.schema.enums.filter(enumDef =>
           !dmmfDocument.datamodel.enums.map(e => e.typeName).includes(enumDef.typeName)
@@ -113,6 +120,8 @@ class CodeGenerator {
       allEnums.forEach((enumDef) => {
         generateEnumFromDef(project, baseDirPath, enumDef);
       });
+
+      this.metrics?.emitMetric('enum-generation', performance.now() - enumStart, allEnums.length);
 
       const emittedEnumNames = Array.from(new Set(
         dmmfDocument.schema.enums.map(it => it.typeName)
@@ -130,6 +139,7 @@ class CodeGenerator {
     // Generate models
     if (dmmfDocument.shouldGenerateBlock("models")) {
       log("Generating models...");
+      const modelStart = performance.now();
       dmmfDocument.datamodel.models.forEach(model => {
         const modelOutputType = dmmfDocument.outputTypeCache.get(model.name);
 
@@ -145,6 +155,8 @@ class CodeGenerator {
           dmmfDocument,
         );
       });
+
+      this.metrics?.emitMetric('model-generation', performance.now() - modelStart, dmmfDocument.datamodel.models.length);
 
       const modelsBarrelExportSourceFile = project.createSourceFile(
         path.resolve(baseDirPath, modelsFolderName, "index.ts"),
@@ -163,6 +175,7 @@ class CodeGenerator {
     // Generate output types
     if (dmmfDocument.shouldGenerateBlock("outputs")) {
       log("Generating output types...");
+      const outputStart = performance.now();
       const rootTypes = dmmfDocument.schema.outputTypes.filter(type =>
         ["Query", "Mutation"].includes(type.name),
       );
@@ -184,6 +197,8 @@ class CodeGenerator {
           dmmfDocument,
         );
       });
+
+      this.metrics?.emitMetric('output-type-generation', performance.now() - outputStart, outputTypesToGenerate.length);
 
       if (outputTypesFieldsArgsToGenerate.length > 0) {
         log("Generating output types args...");
@@ -245,9 +260,14 @@ class CodeGenerator {
     // Generate input types
     if (dmmfDocument.shouldGenerateBlock("inputs")) {
       log("Generating input types...");
+      const inputStart = performance.now();
+      const allInputTypes: string[] = []
       dmmfDocument.schema.inputTypes.forEach((type) => {
+        allInputTypes.push(type.typeName)
         generateInputTypeClassFromType(project, resolversDirPath, type, options);
       });
+
+      this.metrics?.emitMetric('input-type-generation', performance.now() - inputStart, dmmfDocument.schema.inputTypes.length);
 
       const inputsBarrelExportSourceFile = project.createSourceFile(
         path.resolve(
@@ -261,7 +281,7 @@ class CodeGenerator {
       );
       generateInputsBarrelFile(
         inputsBarrelExportSourceFile,
-        dmmfDocument.schema.inputTypes.map(it => it.typeName),
+        allInputTypes
       );
     }
 
@@ -271,6 +291,7 @@ class CodeGenerator {
       dmmfDocument.shouldGenerateBlock("relationResolvers")
     ) {
       log("Generating relation resolvers...");
+      const relationResolverStart = performance.now();
       dmmfDocument.relationModels.forEach(relationModel => {
         generateRelationsResolverClassesFromModel(
           project,
@@ -299,7 +320,10 @@ class CodeGenerator {
         })),
       );
 
+      this.metrics?.emitMetric('relation-resolver-generation', performance.now() - relationResolverStart, dmmfDocument.relationModels.length);
+
       log("Generating relation resolver args...");
+      const relationArgsStart = performance.now();
       dmmfDocument.relationModels.forEach(relationModelData => {
         const resolverDirPath = path.resolve(
           baseDirPath,
@@ -384,11 +408,14 @@ class CodeGenerator {
         "relations",
         relationModelsWithArgs.length > 0,
       );
+
+      this.metrics?.emitMetric('relation-resolver-args', performance.now() - relationArgsStart);
     }
 
     // Generate CRUD resolvers
     if (dmmfDocument.shouldGenerateBlock("crudResolvers")) {
       log("Generating crud resolvers...");
+      const crudResolverStart = performance.now();
       dmmfDocument.modelMappings.forEach(mapping => {
         // Use cached model lookup instead of find()
         const model = dmmfDocument.modelsCache.get(mapping.modelName);
@@ -475,7 +502,10 @@ class CodeGenerator {
       );
       generateResolversIndexFile(crudResolversIndexSourceFile, "crud", true);
 
+      this.metrics?.emitMetric('crud-resolver-generation', performance.now() - crudResolverStart, dmmfDocument.modelMappings.length);
+
       log("Generating crud resolvers args...");
+      const crudArgsStart = performance.now();
       dmmfDocument.modelMappings.forEach(mapping => {
         const actionsWithArgs = mapping.actions.filter(
           it => it.argsTypeName !== undefined,
@@ -541,10 +571,13 @@ class CodeGenerator {
           )
           .map(mapping => mapping.modelTypeName),
       );
+
+      this.metrics?.emitMetric('crud-resolver-args', performance.now() - crudArgsStart);
     }
 
     // Generate auxiliary files
     log("Generate auxiliary files");
+    const auxiliaryStart = performance.now();
     const enhanceSourceFile = project.createSourceFile(
       baseDirPath + "/enhance.ts",
       undefined,
@@ -585,25 +618,37 @@ class CodeGenerator {
       dmmfDocument.options.blocksToEmit,
     );
 
+    this.metrics?.emitMetric('auxiliary-files', performance.now() - auxiliaryStart);
+
     // Emit generated code files
     log("Emitting generated code files");
+    const emitStart = performance.now();
     if (emitTranspiledCode) {
       await project.emit();
     } else {
       if (options.formatGeneratedCode === "tsc") {
+        const tscFormatStart = performance.now();
         const sourceFiles = project.getSourceFiles();
         sourceFiles.forEach((file) => {
           file.formatText({ indentSize: 2 });
         });
+        this.metrics?.emitMetric('tsc-formatting', performance.now() - tscFormatStart, sourceFiles.length);
       }
 
+      const saveStart = performance.now();
       await project.save();
+      this.metrics?.emitMetric('file-writing', performance.now() - saveStart);
 
       if (options.formatGeneratedCode === "prettier") {
+        const prettierStart = performance.now();
         await execa(`npx prettier --write --ignore-path .prettierignore ${baseDirPath}`);
+        this.metrics?.emitMetric('prettier-formatting', performance.now() - prettierStart);
       }
     }
 
+    this.metrics?.emitMetric('code-emission', performance.now() - emitStart);
+    this.metrics?.emitMetric('total-generation', performance.now() - startTime);
+    this.metrics?.onComplete?.();
   }
 }
 
@@ -611,7 +656,8 @@ export default async function generateCode(
   dmmf: PrismaDMMF.Document,
   baseOptions: InternalGeneratorOptions & ExternalGeneratorOptions,
   log: (msg: string) => void = noop,
+  metrics?: MetricsListener,
 ): Promise<void> {
-  const generator = new CodeGenerator();
+  const generator = new CodeGenerator(metrics);
   return generator.generate(dmmf, baseOptions, log);
 }

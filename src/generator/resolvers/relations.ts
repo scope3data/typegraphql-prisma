@@ -4,7 +4,7 @@ import {
   Project,
   Writers,
 } from "ts-morph";
-import path from "path";
+import path from "node:path";
 
 import { camelCase } from "../helpers";
 import { resolversFolderName, relationsResolversFolderName } from "../config";
@@ -15,23 +15,23 @@ import {
   generateHelpersFileImport,
   generateGraphQLInfoImport,
 } from "../imports";
-import { DmmfDocument } from "../dmmf/dmmf-document";
-import { DMMF } from "../dmmf/types";
-import { GeneratorOptions } from "../options";
+import type { DmmfDocument } from "../dmmf/dmmf-document";
+import type { DMMF } from "../dmmf/types";
+import type { GeneratorOptions } from "../options";
 
 export default function generateRelationsResolverClassesFromModel(
   project: Project,
   baseDirPath: string,
-  dmmfDocument: DmmfDocument,
+  _dmmfDocument: DmmfDocument,
   { model, relationFields, resolverName }: DMMF.RelationModel,
   generatorOptions: GeneratorOptions,
 ) {
   const rootArgName = camelCase(model.typeName);
 
   // Create field cache for fast lookups
-  const fieldsCache = new Map<string, any>();
-  let singleIdField: any = undefined;
-  let singleUniqueField: any = undefined;
+  const fieldsCache = new Map<string, DMMF.ModelField>();
+  let singleIdField: DMMF.ModelField | undefined;
+  let singleUniqueField: DMMF.ModelField | undefined;
 
   model.fields.forEach(field => {
     fieldsCache.set(field.name, field);
@@ -43,14 +43,26 @@ export default function generateRelationsResolverClassesFromModel(
     }
   });
 
-  const singleFilterField = singleIdField ?? singleUniqueField;
+  const singleFilterField: DMMF.ModelField | undefined = singleIdField ?? singleUniqueField;
   const compositeIdFields =
     model.primaryKey?.fields.map(
-      idField => fieldsCache.get(idField)!,
+      idField => {
+        const field = fieldsCache.get(idField);
+        if (!field) {
+          throw new Error(`Primary key field '${idField}' not found in model '${model.name}' fields`);
+        }
+        return field;
+      }
     ) ?? [];
   const compositeUniqueFields = model.uniqueIndexes[0]
     ? model.uniqueIndexes[0].fields.map(
-        uniqueField => fieldsCache.get(uniqueField)!,
+        uniqueField => {
+          const field = fieldsCache.get(uniqueField);
+          if (!field) {
+            throw new Error(`Unique field '${uniqueField}' not found in model '${model.name}' fields`);
+          }
+          return field;
+        }
       )
     : [];
   const compositeFilterFields =
@@ -77,7 +89,12 @@ export default function generateRelationsResolverClassesFromModel(
 
   const argTypeNames = relationFields
     .filter(it => it.argsTypeName !== undefined)
-    .map(it => it.argsTypeName!);
+    .map(it => {
+      if (!it.argsTypeName) {
+        throw new Error(`Expected argsTypeName to be defined for relation field after filtering, but got ${it.argsTypeName}`);
+      }
+      return it.argsTypeName;
+    });
   generateArgsImports(sourceFile, argTypeNames, 0);
   generateHelpersFileImport(sourceFile, 3);
 
@@ -95,8 +112,9 @@ export default function generateRelationsResolverClassesFromModel(
         let whereConditionString: string = "";
         // TODO: refactor to AST
         if (singleFilterField) {
+          const field = singleFilterField as DMMF.ModelField;
           whereConditionString = `
-            ${singleFilterField.name}: ${rootArgName}.${singleFilterField.name},
+            ${field.name}: ${rootArgName}.${field.name},
           `;
         } else if (compositeFilterFields.length > 0) {
           const filterKeyName =

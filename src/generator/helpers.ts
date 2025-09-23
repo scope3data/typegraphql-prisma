@@ -37,7 +37,10 @@ export function getFieldTSType(
     }
   } else if (typeInfo.location === "enumTypes") {
     const enumDef = dmmfDocument.getEnumByTypeName(typeInfo.type) ||
-      dmmfDocument.enums.find(it => it.typeName == typeInfo.type)!;
+      dmmfDocument.enums.find(it => it.typeName == typeInfo.type);
+    if (!enumDef) {
+      throw new Error(`Enum type '${typeInfo.type}' not found in DMMF document`);
+    }
     TSType = enumDef.valuesMap.map(({ value }) => `"${value}"`).join(" | ");
   } else {
     throw new Error(`Unsupported field type location: ${typeInfo.location}`);

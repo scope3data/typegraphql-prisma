@@ -14,20 +14,8 @@
     "test:integration": "ts-node ./tests/helpers/setup-tests.ts && env-cmd jest --watch --verbose --config ./jest.config.integration.ts",
     "test:ci": "ts-node ./tests/helpers/setup-tests.ts && jest --coverage --verbose --runInBand && jest --coverage --verbose --runInBand --config ./jest.config.integration.ts",
     "format": "prettier --ignore-path ./.cli.prettierignore --write ./**/*.{js,json,ts,tsx}",
-    "benchmark": "node run-benchmark.js",
-    "benchmark:large": "npm run benchmark ./test-schemas/large-schema.prisma ./generated-test 3",
-    "benchmark:detailed": "node --expose-gc ./lib/benchmark-detailed.js",
-    "benchmark:detailed:large": "npm run benchmark:detailed ./test-schemas/large-schema.prisma ./generated-test 3",
-    "benchmark:compare": "node --expose-gc ./lib/benchmark-comparison.js",
-    "benchmark:compare:large": "npm run benchmark:compare ./test-schemas/large-schema.prisma ./generated-test 3",
-    "benchmark:cache": "node --expose-gc ./lib/benchmark-cached.js",
-    "benchmark:cache:large": "npm run benchmark:cache ./test-schemas/large-schema.prisma ./generated-test",
-    "benchmark:dmmf": "node --expose-gc ./lib/benchmark-dmmf-optimization.js",
-    "benchmark:dmmf:large": "npm run benchmark:dmmf ./test-schemas/large-schema.prisma",
-    "benchmark:final": "node --expose-gc ./lib/benchmark-final-comparison.js",
-    "benchmark:final:large": "npm run benchmark:final ./test-schemas/large-schema.prisma ./generated-test 3",
-    "benchmark:enhanced": "node --expose-gc ./lib/benchmark-enhanced-standalone.js",
-    "benchmark:enhanced:large": "npm run benchmark:enhanced ./test-schemas/large-schema.prisma ./generated-test 3"
+    "benchmark-code": "ts-node ./src/benchmark-generation.ts",
+    "dmmf-compare": "ts-node ./src/dmmf-compare.ts"
   },
   "bin": {
     "typegraphql-prisma": "lib/generator.js"
@@ -63,6 +51,7 @@
     "@types/resolve": "^1.20.6",
     "@types/semver": "^7.5.8",
     "@types/validator": "^13.12.0",
+    "commander": "^14.0.1",
     "directory-tree": "^3.5.2",
     "dotenv": "^17.2.2",
     "env-cmd": "^10.1.0",
