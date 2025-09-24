@@ -1005,6 +1005,24 @@ Object {
         },
       ],
     },
+    Object {
+      "id": 4,
+      "name": "test1",
+      "posts": Array [],
+    },
+    Object {
+      "id": 5,
+      "name": "test2",
+      "posts": Array [
+        Object {
+          "author": Object {
+            "name": "test2",
+          },
+          "color": "RED",
+          "content": "post content",
+        },
+      ],
+    },
   ],
 }
 `;
