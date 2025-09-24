@@ -116,7 +116,6 @@ class CodeGenerationBenchmark {
     for (let i = 0; i < iterations; i++) {
       console.log(`\n🔄 Running iteration ${i + 1}/${iterations}...`);
 
-
       // Clean output directory
       await this.prepareOutputDirectory();
 
@@ -128,7 +127,8 @@ class CodeGenerationBenchmark {
         outputDirPath: this.options.outputDir,
         prismaClientPath: "./node_modules/.prisma/client",
         emitTranspiledCode: false,
-        formatGeneratedCode: this.options.formatType === 'none' ? false : this.options.formatType,
+        formatGeneratedCode:
+          this.options.formatType === "none" ? false : this.options.formatType,
         contextPrismaKey: "prisma",
         emitRedundantTypesInfo: false,
         emitIsAbstract: false,
