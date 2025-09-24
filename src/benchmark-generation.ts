@@ -12,6 +12,7 @@ import { GeneratorOptions } from "./generator/options";
 interface BenchmarkOptions {
   schemaPath: string;
   outputDir: string;
+  formatType?: "biome" | "prettier" | "tsc" | "none" | undefined;
   iterations?: number;
   cleanup?: boolean;
 }
@@ -115,6 +116,7 @@ class CodeGenerationBenchmark {
     for (let i = 0; i < iterations; i++) {
       console.log(`\n🔄 Running iteration ${i + 1}/${iterations}...`);
 
+
       // Clean output directory
       await this.prepareOutputDirectory();
 
@@ -126,7 +128,7 @@ class CodeGenerationBenchmark {
         outputDirPath: this.options.outputDir,
         prismaClientPath: "./node_modules/.prisma/client",
         emitTranspiledCode: false,
-        formatGeneratedCode: false,
+        formatGeneratedCode: this.options.formatType === 'none' ? false : this.options.formatType,
         contextPrismaKey: "prisma",
         emitRedundantTypesInfo: false,
         emitIsAbstract: false,
@@ -290,6 +292,11 @@ function parseArgs(): BenchmarkOptions {
       },
       1,
     )
+    .option(
+      "--format-type <string>",
+      "Format generated code using biome, prettier, tsc, or none",
+      undefined,
+    )
     .option("--no-cleanup", "Keep generated files after benchmark")
     .addHelpText(
       "after",
@@ -307,6 +314,7 @@ Examples:
   return {
     schemaPath: options.schema,
     outputDir: options.output,
+    formatType: options.formatType,
     iterations: options.iterations,
     cleanup: options.cleanup,
   };

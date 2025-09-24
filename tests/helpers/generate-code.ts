@@ -1,6 +1,6 @@
-import path from "path";
+import path from "node:path";
 import generateCode from "../../src/generator/generate-code";
-import {
+import type {
   ExternalGeneratorOptions,
   InternalGeneratorOptions,
 } from "../../src/generator/options";
@@ -30,6 +30,7 @@ export async function generateCodeFromSchema(
     ),
     {
       prismaClientPath: path.resolve(__dirname, "./prisma-client-mock"),
+      formatGeneratedCode: false,
       ...options,
     },
   );

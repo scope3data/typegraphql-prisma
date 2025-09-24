@@ -8,6 +8,7 @@ import {
   transformModelWithFields,
   transformEnums,
   generateRelationModel,
+  clearOutputTypeNameCache,
 } from "./transform";
 import type { GeneratorOptions } from "../options";
 import type { EmitBlockKind } from "../emit-block";
@@ -34,6 +35,9 @@ export class DmmfDocument implements DMMF.Document {
     { datamodel, schema, mappings }: PrismaDMMF.Document,
     public options: GeneratorOptions,
   ) {
+    // Clear module-level caches to prevent pollution between test runs
+    clearOutputTypeNameCache();
+
     // Initialize caches
     this.outputTypeCache = new Map();
     this.modelsCache = new Map();
@@ -57,6 +61,8 @@ export class DmmfDocument implements DMMF.Document {
     // this also inits the modelTypeNameCache and fieldAliasCache
     this.models = models.map((model) => {
       const transformed = transformModelWithFields(this)(model)
+
+
 
       this.modelsCache.set(model.name, transformed);
       this.modelTypeNameCache.add(transformed.typeName);

@@ -74,15 +74,13 @@ export default function generateObjectTypeClassFromModel(
             name: "TypeGraphQL.ObjectType",
             arguments: [
               `"${model.typeName}"`,
-              Writers.object({
-                ...(dmmfDocument.options.emitIsAbstract && {
-                  isAbstract: "true",
-                }),
-                ...(model.docs && { description: `"${model.docs}"` }),
-                ...(dmmfDocument.options.simpleResolvers && {
-                  simpleResolvers: "true",
-                }),
-              }),
+              (() => {
+                const options = [];
+                if (dmmfDocument.options.emitIsAbstract) options.push('isAbstract: true');
+                if (model.docs) options.push(`description: "${model.docs}"`);
+                if (dmmfDocument.options.simpleResolvers) options.push('simpleResolvers: true');
+                return options.length > 0 ? `{ ${options.join(', ')} }` : '{}';
+              })(),
             ],
           },
         ],
@@ -109,10 +107,11 @@ export default function generateObjectTypeClassFromModel(
                     name: "TypeGraphQL.Field",
                     arguments: [
                       `_type => ${field.typeGraphQLType}`,
-                      Writers.object({
-                        nullable: `${isOptional}`,
-                        ...(field.docs && { description: `"${field.docs}"` }),
-                      }),
+                      (() => {
+                        const options = [`nullable: ${isOptional}`];
+                        if (field.docs) options.push(`description: "${field.docs}"`);
+                        return `{ ${options.join(', ')} }`;
+                      })(),
                     ],
                   },
                 ]),
@@ -135,9 +134,7 @@ export default function generateObjectTypeClassFromModel(
                   name: "TypeGraphQL.Field",
                   arguments: [
                     `_type => ${countField.typeGraphQLType}`,
-                    Writers.object({
-                      nullable: `${!countField.isRequired}`,
-                    }),
+                    `{ nullable: ${!countField.isRequired} }`,
                   ],
                 },
               ],
@@ -162,10 +159,11 @@ export default function generateObjectTypeClassFromModel(
               name: "TypeGraphQL.Field",
               arguments: [
                 `_type => ${field.typeGraphQLType}`,
-                Writers.object({
-                  nullable: `${!field.isRequired}`,
-                  ...(field.docs && { description: `"${field.docs}"` }),
-                }),
+                (() => {
+                  const options = [`nullable: ${!field.isRequired}`];
+                  if (field.docs) options.push(`description: "${field.docs}"`);
+                  return `{ ${options.join(', ')} }`;
+                })(),
               ],
             },
           ],

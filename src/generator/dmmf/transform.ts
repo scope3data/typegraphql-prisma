@@ -276,6 +276,10 @@ function transformOutputType(dmmfDocument: DmmfDocument) {
 // Cache for mapped output type names to avoid repeated string operations
 const outputTypeNameCache = new Map<string, string>();
 
+export function clearOutputTypeNameCache(): void {
+  outputTypeNameCache.clear();
+}
+
 // Pre-compiled suffixes for O(1) lookup
 const DEDICATED_TYPE_SUFFIXES = [
   "CountAggregateOutputType",

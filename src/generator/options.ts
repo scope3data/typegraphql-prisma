@@ -14,7 +14,7 @@ export interface ExternalGeneratorOptions {
   useSimpleInputs?: boolean;
   omitInputFieldsByDefault?: string[];
   omitOutputFieldsByDefault?: string[];
-  formatGeneratedCode?: boolean | "prettier" | "tsc";
+  formatGeneratedCode?: boolean | "prettier" | "tsc" | "biome";
   useWorkerThreads?: boolean;
   emitIsAbstract?: boolean;
 }
