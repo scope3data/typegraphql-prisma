@@ -17,6 +17,7 @@ export interface ExternalGeneratorOptions {
   formatGeneratedCode?: boolean | "prettier" | "tsc" | "biome";
   useWorkerThreads?: boolean;
   emitIsAbstract?: boolean;
+  verboseLogging?: boolean;
 }
 
 export interface InternalGeneratorOptions {
