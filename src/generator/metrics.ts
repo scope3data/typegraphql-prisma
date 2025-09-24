@@ -7,7 +7,12 @@ export interface MetricData {
 }
 
 export interface MetricsListener {
-  emitMetric(phase: string, duration?: number, count?: number, details?: Record<string, any>): void;
+  emitMetric(
+    phase: string,
+    duration?: number,
+    count?: number,
+    details?: Record<string, any>,
+  ): void;
   onComplete?(): void;
 }
 
@@ -21,7 +26,12 @@ export class SimpleMetricsCollector implements MetricsListener {
     this.verboseLogging = verboseLogging;
   }
 
-  emitMetric(phase: string, duration?: number, count?: number, details?: Record<string, any>): void {
+  emitMetric(
+    phase: string,
+    duration?: number,
+    count?: number,
+    details?: Record<string, any>,
+  ): void {
     const metric: MetricData = {
       phase,
       duration,
@@ -56,7 +66,7 @@ export class SimpleMetricsCollector implements MetricsListener {
     }
 
     if (this.verboseLogging) {
-      console.log(`📊 ${parts.join(' - ')}`);
+      console.log(`📊 ${parts.join(" - ")}`);
     }
   }
 
@@ -65,46 +75,55 @@ export class SimpleMetricsCollector implements MetricsListener {
       return;
     }
 
-    console.log('\n📈 GENERATION METRICS SUMMARY');
-    console.log('='.repeat(50));
+    console.log("\n📈 GENERATION METRICS SUMMARY");
+    console.log("=".repeat(50));
 
     const totalTime = this.getTotalDuration();
     console.log(`🕐 Total Generation Time: ${totalTime.toFixed(2)}ms`);
 
     // Phase breakdown
-    console.log('\n⏱️  Phase Breakdown:');
+    console.log("\n⏱️  Phase Breakdown:");
     const phaseStats = this.getPhaseStatistics();
 
     phaseStats
       .sort((a, b) => b.totalTime - a.totalTime)
       .forEach(stat => {
-        const percentage = (stat.totalTime / totalTime * 100).toFixed(1);
-        console.log(`  ${stat.phase.padEnd(25)} ${stat.totalTime.toFixed(2)}ms (${percentage}%)`);
+        const percentage = ((stat.totalTime / totalTime) * 100).toFixed(1);
+        console.log(
+          `  ${stat.phase.padEnd(25)} ${stat.totalTime.toFixed(2)}ms (${percentage}%)`,
+        );
 
         if (stat.count > 1) {
-          console.log(`    ${' '.repeat(25)} avg: ${stat.avgTime.toFixed(2)}ms, runs: ${stat.count}`);
+          console.log(
+            `    ${" ".repeat(25)} avg: ${stat.avgTime.toFixed(2)}ms, runs: ${stat.count}`,
+          );
         }
       });
 
     // Performance insights
-    console.log('\n💡 Performance Insights:');
+    console.log("\n💡 Performance Insights:");
     const slowPhases = phaseStats.filter(s => s.totalTime > 50);
     if (slowPhases.length > 0) {
-      console.log('  🔥 Phases that took >50ms (consider optimization):');
+      console.log("  🔥 Phases that took >50ms (consider optimization):");
       slowPhases.forEach(phase => {
         console.log(`    - ${phase.phase}: ${phase.totalTime.toFixed(2)}ms`);
       });
     } else {
-      console.log('  ✅ All phases completed efficiently (<50ms each)');
+      console.log("  ✅ All phases completed efficiently (<50ms each)");
     }
 
     // Count-based insights
     const countMetrics = this.metrics.filter(m => m.count !== undefined);
     if (countMetrics.length > 0) {
-      console.log('\n📊 Item Processing:');
+      console.log("\n📊 Item Processing:");
       countMetrics.forEach(metric => {
-        const rate = metric.duration && metric.count ? (metric.count / metric.duration * 1000) : 0;
-        console.log(`  ${metric.phase}: ${metric.count} items${rate > 0 ? ` (${rate.toFixed(0)}/sec)` : ''}`);
+        const rate =
+          metric.duration && metric.count
+            ? (metric.count / metric.duration) * 1000
+            : 0;
+        console.log(
+          `  ${metric.phase}: ${metric.count} items${rate > 0 ? ` (${rate.toFixed(0)}/sec)` : ""}`,
+        );
       });
     }
   }
@@ -116,14 +135,16 @@ export class SimpleMetricsCollector implements MetricsListener {
   }
 
   private getPhaseStatistics() {
-    return Array.from(this.phaseTimings.entries()).map(([phase, durations]) => ({
-      phase,
-      totalTime: durations.reduce((sum, d) => sum + d, 0),
-      avgTime: durations.reduce((sum, d) => sum + d, 0) / durations.length,
-      count: durations.length,
-      minTime: Math.min(...durations),
-      maxTime: Math.max(...durations),
-    }));
+    return Array.from(this.phaseTimings.entries()).map(
+      ([phase, durations]) => ({
+        phase,
+        totalTime: durations.reduce((sum, d) => sum + d, 0),
+        avgTime: durations.reduce((sum, d) => sum + d, 0) / durations.length,
+        count: durations.length,
+        minTime: Math.min(...durations),
+        maxTime: Math.max(...durations),
+      }),
+    );
   }
 
   getMetrics(): MetricData[] {

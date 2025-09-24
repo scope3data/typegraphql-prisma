@@ -56,7 +56,10 @@ export default function generateObjectTypeClassFromModel(
       .map(field => field.type),
   );
 
-  const countField = dmmfDocument.getOutputTypeField(modelOutputType.name, "_count");
+  const countField = dmmfDocument.getOutputTypeField(
+    modelOutputType.name,
+    "_count",
+  );
   const shouldEmitCountField =
     countField !== undefined &&
     dmmfDocument.shouldGenerateBlock("crudResolvers");
@@ -76,10 +79,12 @@ export default function generateObjectTypeClassFromModel(
               `"${model.typeName}"`,
               (() => {
                 const options = [];
-                if (dmmfDocument.options.emitIsAbstract) options.push('isAbstract: true');
+                if (dmmfDocument.options.emitIsAbstract)
+                  options.push("isAbstract: true");
                 if (model.docs) options.push(`description: "${model.docs}"`);
-                if (dmmfDocument.options.simpleResolvers) options.push('simpleResolvers: true');
-                return options.length > 0 ? `{ ${options.join(', ')} }` : '{}';
+                if (dmmfDocument.options.simpleResolvers)
+                  options.push("simpleResolvers: true");
+                return options.length > 0 ? `{ ${options.join(", ")} }` : "{}";
               })(),
             ],
           },
@@ -109,8 +114,9 @@ export default function generateObjectTypeClassFromModel(
                       `_type => ${field.typeGraphQLType}`,
                       (() => {
                         const options = [`nullable: ${isOptional}`];
-                        if (field.docs) options.push(`description: "${field.docs}"`);
-                        return `{ ${options.join(', ')} }`;
+                        if (field.docs)
+                          options.push(`description: "${field.docs}"`);
+                        return `{ ${options.join(", ")} }`;
                       })(),
                     ],
                   },
@@ -162,7 +168,7 @@ export default function generateObjectTypeClassFromModel(
                 (() => {
                   const options = [`nullable: ${!field.isRequired}`];
                   if (field.docs) options.push(`description: "${field.docs}"`);
-                  return `{ ${options.join(', ')} }`;
+                  return `{ ${options.join(", ")} }`;
                 })(),
               ],
             },

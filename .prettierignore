@@ -13,3 +13,6 @@ coverage
 **/prisma/migrations/**/*
 prisma-client-mock.js
 prisma-client-mock.d.ts
+
+generated-test
+test-schemas

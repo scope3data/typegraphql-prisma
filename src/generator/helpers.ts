@@ -36,10 +36,13 @@ export function getFieldTSType(
       TSType = getInputTypeName(typeInfo.type, dmmfDocument);
     }
   } else if (typeInfo.location === "enumTypes") {
-    const enumDef = dmmfDocument.getEnumByTypeName(typeInfo.type) ||
+    const enumDef =
+      dmmfDocument.getEnumByTypeName(typeInfo.type) ||
       dmmfDocument.enums.find(it => it.typeName == typeInfo.type);
     if (!enumDef) {
-      throw new Error(`Enum type '${typeInfo.type}' not found in DMMF document`);
+      throw new Error(
+        `Enum type '${typeInfo.type}' not found in DMMF document`,
+      );
     }
     TSType = enumDef.valuesMap.map(({ value }) => `"${value}"`).join(" | ");
   } else {

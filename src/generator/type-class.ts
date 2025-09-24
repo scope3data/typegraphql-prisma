@@ -84,9 +84,11 @@ export function generateOutputTypeClassFromType(
           `"${type.typeName}"`,
           (() => {
             const options = [];
-            if (dmmfDocument.options.emitIsAbstract) options.push('isAbstract: true');
-            if (dmmfDocument.options.simpleResolvers) options.push('simpleResolvers: true');
-            return options.length > 0 ? `{ ${options.join(', ')} }` : '{}';
+            if (dmmfDocument.options.emitIsAbstract)
+              options.push("isAbstract: true");
+            if (dmmfDocument.options.simpleResolvers)
+              options.push("simpleResolvers: true");
+            return options.length > 0 ? `{ ${options.join(", ")} }` : "{}";
           })(),
         ],
       },
@@ -197,7 +199,7 @@ export function generateInputTypeClassFromType(
         name: "TypeGraphQL.InputType",
         arguments: [
           `"${inputType.typeName}"`,
-          options.emitIsAbstract ? '{ isAbstract: true }' : '{}',
+          options.emitIsAbstract ? "{ isAbstract: true }" : "{}",
         ],
       },
     ],

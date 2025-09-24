@@ -3,7 +3,7 @@ import {
   type OptionalKind,
   type Project,
   Writers,
-  type SourceFile
+  type SourceFile,
 } from "ts-morph";
 import path from "node:path";
 

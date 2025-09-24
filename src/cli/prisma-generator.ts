@@ -27,9 +27,10 @@ export async function generate(options: GeneratorOptions) {
   const outputDir = parseEnvValue(options.generator.output!);
 
   // Parse verboseLogging option early to control all logging
-  const verboseLogging = parseStringBoolean(options.generator.config.verboseLogging) ?? false;
+  const verboseLogging =
+    parseStringBoolean(options.generator.config.verboseLogging) ?? false;
 
-  console.log(verboseLogging, 'verboseLogging!')
+  console.log(verboseLogging, "verboseLogging!");
 
   // Create logging function based on verboseLogging option
   const log = (message: string) => {
@@ -41,14 +42,18 @@ export async function generate(options: GeneratorOptions) {
   const dirSetupStart = performance.now();
   await asyncFs.mkdir(outputDir, { recursive: true });
   await removeDir(outputDir, true);
-  log(`📁 Directory setup: ${(performance.now() - dirSetupStart).toFixed(2)}ms`);
+  log(
+    `📁 Directory setup: ${(performance.now() - dirSetupStart).toFixed(2)}ms`,
+  );
 
   const prismaSetupStart = performance.now();
   const prismaClientProvider = options.otherGenerators.find(
     it => parseEnvValue(it.provider) === "prisma-client-js",
   )!;
   const prismaClientPath = parseEnvValue(prismaClientProvider.output!);
-  log(`🔍 Prisma client provider lookup: ${(performance.now() - prismaSetupStart).toFixed(2)}ms`);
+  log(
+    `🔍 Prisma client provider lookup: ${(performance.now() - prismaSetupStart).toFixed(2)}ms`,
+  );
 
   const dmmfStart = performance.now();
   const prismaClientDmmf = await getDMMF({
@@ -123,7 +128,9 @@ export async function generate(options: GeneratorOptions) {
         JSON.stringify(prismaClientDmmf, null, 2),
       ),
     ]);
-    log(`💾 DMMF file writing: ${(performance.now() - dmmfWriteStart).toFixed(2)}ms`);
+    log(
+      `💾 DMMF file writing: ${(performance.now() - dmmfWriteStart).toFixed(2)}ms`,
+    );
   }
 
   // TODO: replace with `options.dmmf` when the spec match prisma client output
@@ -133,10 +140,18 @@ export async function generate(options: GeneratorOptions) {
   log(`📊 DMMF Comparison:`);
   log(`  Models: ${prismaClientDmmf.datamodel.models.length}`);
   log(`  Enums: ${prismaClientDmmf.datamodel.enums.length}`);
-  log(`  Input Types (prisma): ${prismaClientDmmf.schema.inputObjectTypes.prisma?.length || 0}`);
-  log(`  Input Types (model): ${prismaClientDmmf.schema.inputObjectTypes.model?.length || 0}`);
-  log(`  Output Types (prisma): ${prismaClientDmmf.schema.outputObjectTypes.prisma.length}`);
-  log(`  Output Types (model): ${prismaClientDmmf.schema.outputObjectTypes.model.length}`);
+  log(
+    `  Input Types (prisma): ${prismaClientDmmf.schema.inputObjectTypes.prisma?.length || 0}`,
+  );
+  log(
+    `  Input Types (model): ${prismaClientDmmf.schema.inputObjectTypes.model?.length || 0}`,
+  );
+  log(
+    `  Output Types (prisma): ${prismaClientDmmf.schema.outputObjectTypes.prisma.length}`,
+  );
+  log(
+    `  Output Types (model): ${prismaClientDmmf.schema.outputObjectTypes.model.length}`,
+  );
 
   log(`⚙️  Config Comparison:`);
   log(`  formatGeneratedCode: ${externalConfig.formatGeneratedCode}`);
@@ -147,12 +162,15 @@ export async function generate(options: GeneratorOptions) {
   // Create metrics collector for detailed analysis
   const metricsCollector = new SimpleMetricsCollector(verboseLogging);
 
-  await generateCode(prismaClientDmmf, {
-    ...externalConfig,
-    ...internalConfig,
-  },
-  (msg: string) => log(`📝 ${msg}`),
-  metricsCollector);
+  await generateCode(
+    prismaClientDmmf,
+    {
+      ...externalConfig,
+      ...internalConfig,
+    },
+    (msg: string) => log(`📝 ${msg}`),
+    metricsCollector,
+  );
 
   const codeGenTime = performance.now() - codeGenStart;
   log(`🎯 Core code generation: ${codeGenTime.toFixed(2)}ms`);
