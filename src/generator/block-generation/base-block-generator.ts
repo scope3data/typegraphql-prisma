@@ -2,8 +2,6 @@ import type { Project } from "ts-morph";
 import type { DmmfDocument } from "../dmmf/dmmf-document";
 import type { GeneratorOptions } from "../options";
 
-
-
 export abstract class BaseBlockGenerator {
   protected project: Project;
   protected dmmfDocument: DmmfDocument;

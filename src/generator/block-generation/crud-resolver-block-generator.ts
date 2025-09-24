@@ -1,6 +1,9 @@
 import path from "node:path";
 import { performance } from "node:perf_hooks";
-import { BaseBlockGenerator, type GenerationMetrics } from "./base-block-generator";
+import {
+  BaseBlockGenerator,
+  type GenerationMetrics,
+} from "./base-block-generator";
 import generateCrudResolverClassFromMapping from "../resolvers/full-crud";
 import generateActionResolverClass from "../resolvers/separate-action";
 import generateArgsTypeClassFromArgs from "../args-class";
@@ -40,7 +43,9 @@ export class CrudResolverBlockGenerator extends BaseBlockGenerator {
       // Use cached model lookup instead of find()
       const model = this.dmmfDocument.modelsCache.get(mapping.modelName);
       if (!model) {
-        throw new Error(`No model found for mapping ${mapping.modelName}. This indicates a problem with the DMMF document processing.`);
+        throw new Error(
+          `No model found for mapping ${mapping.modelName}. This indicates a problem with the DMMF document processing.`,
+        );
       }
 
       generateCrudResolverClassFromMapping(
@@ -53,7 +58,7 @@ export class CrudResolverBlockGenerator extends BaseBlockGenerator {
       );
       totalItemsGenerated++;
 
-      mapping.actions.forEach((action) => {
+      mapping.actions.forEach(action => {
         generateActionResolverClass(
           this.project,
           this.baseDirPath,
@@ -81,7 +86,9 @@ export class CrudResolverBlockGenerator extends BaseBlockGenerator {
       .map(mapping => {
         const model = this.dmmfDocument.modelsCache.get(mapping.modelName);
         if (!model) {
-          throw new Error(`No model found for mapping ${mapping.modelName} when generating mapping data. This indicates a problem with the DMMF document processing.`);
+          throw new Error(
+            `No model found for mapping ${mapping.modelName} when generating mapping data. This indicates a problem with the DMMF document processing.`,
+          );
         }
         return {
           modelName: model.typeName,
@@ -89,7 +96,10 @@ export class CrudResolverBlockGenerator extends BaseBlockGenerator {
           actionResolverNames: mapping.actions.map(it => it.actionResolverName),
         } as GenerateMappingData;
       })
-      .filter((item: GenerateMappingData | null): item is GenerateMappingData => item !== null);
+      .filter(
+        (item: GenerateMappingData | null): item is GenerateMappingData =>
+          item !== null,
+      );
 
     const crudResolversBarrelExportSourceFile = this.project.createSourceFile(
       path.resolve(
@@ -106,16 +116,17 @@ export class CrudResolverBlockGenerator extends BaseBlockGenerator {
       generateMappingData,
     );
 
-    const crudResolversActionsBarrelExportSourceFile = this.project.createSourceFile(
-      path.resolve(
-        this.baseDirPath,
-        resolversFolderName,
-        crudResolversFolderName,
-        "resolvers-actions.index.ts",
-      ),
-      undefined,
-      { overwrite: true },
-    );
+    const crudResolversActionsBarrelExportSourceFile =
+      this.project.createSourceFile(
+        path.resolve(
+          this.baseDirPath,
+          resolversFolderName,
+          crudResolversFolderName,
+          "resolvers-actions.index.ts",
+        ),
+        undefined,
+        { overwrite: true },
+      );
     generateResolversActionsBarrelFile(
       crudResolversActionsBarrelExportSourceFile,
       generateMappingData,
@@ -143,7 +154,9 @@ export class CrudResolverBlockGenerator extends BaseBlockGenerator {
       if (actionsWithArgs.length) {
         const model = this.dmmfDocument.modelsCache.get(mapping.modelName);
         if (!model) {
-          throw new Error(`No model found for mapping ${mapping.modelName} when generating CRUD resolver args. This indicates a problem with the DMMF document processing.`);
+          throw new Error(
+            `No model found for mapping ${mapping.modelName} when generating CRUD resolver args. This indicates a problem with the DMMF document processing.`,
+          );
         }
         const resolverDirPath = path.resolve(
           this.baseDirPath,
@@ -152,9 +165,11 @@ export class CrudResolverBlockGenerator extends BaseBlockGenerator {
           model.typeName,
         );
 
-        actionsWithArgs.forEach((action) => {
+        actionsWithArgs.forEach(action => {
           if (!action.argsTypeName) {
-            throw new Error(`Expected argsTypeName to be defined for CRUD action after filtering, but got ${action.argsTypeName}`);
+            throw new Error(
+              `Expected argsTypeName to be defined for CRUD action after filtering, but got ${action.argsTypeName}`,
+            );
           }
           generateArgsTypeClassFromArgs(
             this.project,
@@ -174,7 +189,9 @@ export class CrudResolverBlockGenerator extends BaseBlockGenerator {
           barrelExportSourceFile,
           actionsWithArgs.map(it => {
             if (!it.argsTypeName) {
-              throw new Error(`Expected argsTypeName to be defined for CRUD action after filtering, but got ${it.argsTypeName}`);
+              throw new Error(
+                `Expected argsTypeName to be defined for CRUD action after filtering, but got ${it.argsTypeName}`,
+              );
             }
             return it.argsTypeName;
           }),

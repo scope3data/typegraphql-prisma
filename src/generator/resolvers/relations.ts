@@ -43,27 +43,28 @@ export default function generateRelationsResolverClassesFromModel(
     }
   });
 
-  const singleFilterField: DMMF.ModelField | undefined = singleIdField ?? singleUniqueField;
+  const singleFilterField: DMMF.ModelField | undefined =
+    singleIdField ?? singleUniqueField;
   const compositeIdFields =
-    model.primaryKey?.fields.map(
-      idField => {
-        const field = fieldsCache.get(idField);
+    model.primaryKey?.fields.map(idField => {
+      const field = fieldsCache.get(idField);
+      if (!field) {
+        throw new Error(
+          `Primary key field '${idField}' not found in model '${model.name}' fields`,
+        );
+      }
+      return field;
+    }) ?? [];
+  const compositeUniqueFields = model.uniqueIndexes[0]
+    ? model.uniqueIndexes[0].fields.map(uniqueField => {
+        const field = fieldsCache.get(uniqueField);
         if (!field) {
-          throw new Error(`Primary key field '${idField}' not found in model '${model.name}' fields`);
+          throw new Error(
+            `Unique field '${uniqueField}' not found in model '${model.name}' fields`,
+          );
         }
         return field;
-      }
-    ) ?? [];
-  const compositeUniqueFields = model.uniqueIndexes[0]
-    ? model.uniqueIndexes[0].fields.map(
-        uniqueField => {
-          const field = fieldsCache.get(uniqueField);
-          if (!field) {
-            throw new Error(`Unique field '${uniqueField}' not found in model '${model.name}' fields`);
-          }
-          return field;
-        }
-      )
+      })
     : [];
   const compositeFilterFields =
     compositeIdFields.length > 0 ? compositeIdFields : compositeUniqueFields;
@@ -91,7 +92,9 @@ export default function generateRelationsResolverClassesFromModel(
     .filter(it => it.argsTypeName !== undefined)
     .map(it => {
       if (!it.argsTypeName) {
-        throw new Error(`Expected argsTypeName to be defined for relation field after filtering, but got ${it.argsTypeName}`);
+        throw new Error(
+          `Expected argsTypeName to be defined for relation field after filtering, but got ${it.argsTypeName}`,
+        );
       }
       return it.argsTypeName;
     });

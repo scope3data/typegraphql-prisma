@@ -1,6 +1,9 @@
 import path from "node:path";
 import { performance } from "node:perf_hooks";
-import { BaseBlockGenerator, type GenerationMetrics } from "./base-block-generator";
+import {
+  BaseBlockGenerator,
+  type GenerationMetrics,
+} from "./base-block-generator";
 import generateRelationsResolverClassesFromModel from "../resolvers/relations";
 import generateArgsTypeClassFromArgs from "../args-class";
 import {
@@ -56,22 +59,25 @@ export class RelationResolverBlockGenerator extends BaseBlockGenerator {
   }
 
   private generateBarrelFiles(): void {
-    const relationResolversBarrelExportSourceFile = this.project.createSourceFile(
-      path.resolve(
-        this.baseDirPath,
-        resolversFolderName,
-        relationsResolversFolderName,
-        "resolvers.index.ts",
-      ),
-      undefined,
-      { overwrite: true },
-    );
+    const relationResolversBarrelExportSourceFile =
+      this.project.createSourceFile(
+        path.resolve(
+          this.baseDirPath,
+          resolversFolderName,
+          relationsResolversFolderName,
+          "resolvers.index.ts",
+        ),
+        undefined,
+        { overwrite: true },
+      );
     generateResolversBarrelFile(
       relationResolversBarrelExportSourceFile,
-      this.dmmfDocument.relationModels.map<GenerateMappingData>(relationModel => ({
-        resolverName: relationModel.resolverName,
-        modelName: relationModel.model.typeName,
-      })),
+      this.dmmfDocument.relationModels.map<GenerateMappingData>(
+        relationModel => ({
+          resolverName: relationModel.resolverName,
+          modelName: relationModel.model.typeName,
+        }),
+      ),
     );
 
     // Generate remaining relation resolver index files
@@ -83,16 +89,17 @@ export class RelationResolverBlockGenerator extends BaseBlockGenerator {
     );
 
     if (relationModelsWithArgs.length > 0) {
-      const relationResolversArgsIndexSourceFile = this.project.createSourceFile(
-        path.resolve(
-          this.baseDirPath,
-          resolversFolderName,
-          relationsResolversFolderName,
-          "args.index.ts",
-        ),
-        undefined,
-        { overwrite: true },
-      );
+      const relationResolversArgsIndexSourceFile =
+        this.project.createSourceFile(
+          path.resolve(
+            this.baseDirPath,
+            resolversFolderName,
+            relationsResolversFolderName,
+            "args.index.ts",
+          ),
+          undefined,
+          { overwrite: true },
+        );
       generateArgsIndexFile(
         relationResolversArgsIndexSourceFile,
         relationModelsWithArgs.map(
@@ -127,11 +134,15 @@ export class RelationResolverBlockGenerator extends BaseBlockGenerator {
         relationModelData.model.typeName,
       );
 
-      const fieldsWithArgs = relationModelData.relationFields.filter(field => field.argsTypeName);
+      const fieldsWithArgs = relationModelData.relationFields.filter(
+        field => field.argsTypeName,
+      );
 
-      fieldsWithArgs.forEach((field) => {
+      fieldsWithArgs.forEach(field => {
         if (!field.argsTypeName) {
-          throw new Error(`Expected argsTypeName to be defined for relation field after filtering, but got ${field.argsTypeName}`);
+          throw new Error(
+            `Expected argsTypeName to be defined for relation field after filtering, but got ${field.argsTypeName}`,
+          );
         }
         generateArgsTypeClassFromArgs(
           this.project,
@@ -146,7 +157,9 @@ export class RelationResolverBlockGenerator extends BaseBlockGenerator {
         .filter(it => it.argsTypeName !== undefined)
         .map(it => {
           if (!it.argsTypeName) {
-            throw new Error(`Expected argsTypeName to be defined after filtering, but got ${it.argsTypeName}`);
+            throw new Error(
+              `Expected argsTypeName to be defined after filtering, but got ${it.argsTypeName}`,
+            );
           }
           return it.argsTypeName;
         });

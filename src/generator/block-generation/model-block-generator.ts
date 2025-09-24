@@ -1,6 +1,9 @@
 import path from "node:path";
 import { performance } from "node:perf_hooks";
-import { BaseBlockGenerator, type GenerationMetrics } from "./base-block-generator";
+import {
+  BaseBlockGenerator,
+  type GenerationMetrics,
+} from "./base-block-generator";
 import generateObjectTypeClassFromModel from "../model-type-class";
 import { generateModelsBarrelFile } from "../imports";
 import { modelsFolderName } from "../config";
@@ -25,7 +28,9 @@ export class ModelBlockGenerator extends BaseBlockGenerator {
       const modelOutputType = this.dmmfDocument.outputTypeCache.get(model.name);
 
       if (!modelOutputType) {
-        throw new Error(`Model ${model.name} has no output type. This indicates a problem with the DMMF document processing.`);
+        throw new Error(
+          `Model ${model.name} has no output type. This indicates a problem with the DMMF document processing.`,
+        );
       }
 
       generateObjectTypeClassFromModel(

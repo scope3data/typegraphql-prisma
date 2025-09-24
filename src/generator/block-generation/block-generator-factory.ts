@@ -13,8 +13,6 @@ import {
   type GenerationMetrics,
 } from "./index";
 
-
-
 export class BlockGeneratorFactory {
   private project: Project;
   private dmmfDocument: DmmfDocument;
@@ -118,7 +116,10 @@ export class BlockGeneratorFactory {
       }
 
       // Special case: capture output types for enhance map generation
-      if (blockName === "outputs" && generator instanceof OutputBlockGenerator) {
+      if (
+        blockName === "outputs" &&
+        generator instanceof OutputBlockGenerator
+      ) {
         outputTypesToGenerate = generator.getGeneratedOutputTypes();
       }
     }

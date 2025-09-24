@@ -1,4 +1,7 @@
-export { BaseBlockGenerator, type GenerationMetrics } from "./base-block-generator";
+export {
+  BaseBlockGenerator,
+  type GenerationMetrics,
+} from "./base-block-generator";
 export { EnumBlockGenerator } from "./enum-block-generator";
 export { ModelBlockGenerator } from "./model-block-generator";
 export { InputBlockGenerator } from "./input-block-generator";

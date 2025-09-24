@@ -1,4 +1,9 @@
-import type { OptionalKind, MethodDeclarationStructure, Project, SourceFile } from "ts-morph";
+import type {
+  OptionalKind,
+  MethodDeclarationStructure,
+  Project,
+  SourceFile,
+} from "ts-morph";
 import path from "node:path";
 
 import { resolversFolderName, crudResolversFolderName } from "../config";
@@ -22,14 +27,16 @@ export default function generateCrudResolverClassFromMapping(
   model: DMMF.Model,
   dmmfDocument: DmmfDocument,
   generatorOptions: GeneratorOptions,
-): SourceFile
-{
-  const filePath = path.resolve(path.resolve(
-    baseDirPath,
-    resolversFolderName,
-    crudResolversFolderName,
-    model.typeName,
-  ), `${mapping.resolverName}.ts`);
+): SourceFile {
+  const filePath = path.resolve(
+    path.resolve(
+      baseDirPath,
+      resolversFolderName,
+      crudResolversFolderName,
+      model.typeName,
+    ),
+    `${mapping.resolverName}.ts`,
+  );
   const sourceFile = project.createSourceFile(filePath, undefined, {
     overwrite: true,
   });
@@ -45,7 +52,9 @@ export default function generateCrudResolverClassFromMapping(
   );
   generateHelpersFileImport(sourceFile, 3);
 
-  const distinctOutputTypesNames = Array.from(new Set(mapping.actions.map(it => it.outputTypeName)))
+  const distinctOutputTypesNames = Array.from(
+    new Set(mapping.actions.map(it => it.outputTypeName)),
+  );
   const modelOutputTypeNames = distinctOutputTypesNames.filter(typeName =>
     dmmfDocument.isModelTypeName(typeName),
   );

@@ -1,10 +1,17 @@
 import path from "node:path";
 import { performance } from "node:perf_hooks";
-import { BaseBlockGenerator, type GenerationMetrics } from "./base-block-generator";
+import {
+  BaseBlockGenerator,
+  type GenerationMetrics,
+} from "./base-block-generator";
 import { generateOutputTypeClassFromType } from "../type-class";
 import generateArgsTypeClassFromArgs from "../args-class";
 import { generateOutputsBarrelFile, generateArgsBarrelFile } from "../imports";
-import { resolversFolderName, outputsFolderName, argsFolderName } from "../config";
+import {
+  resolversFolderName,
+  outputsFolderName,
+  argsFolderName,
+} from "../config";
 import type { DMMF } from "../dmmf/types";
 
 export class OutputBlockGenerator extends BaseBlockGenerator {
@@ -24,12 +31,17 @@ export class OutputBlockGenerator extends BaseBlockGenerator {
     }
 
     const startTime = performance.now();
-    const resolversDirPath = path.resolve(this.baseDirPath, resolversFolderName);
+    const resolversDirPath = path.resolve(
+      this.baseDirPath,
+      resolversFolderName,
+    );
 
     const rootTypes = this.dmmfDocument.schema.outputTypes.filter(type =>
       ["Query", "Mutation"].includes(type.name),
     );
-    const modelNames = this.dmmfDocument.datamodel.models.map(model => model.name);
+    const modelNames = this.dmmfDocument.datamodel.models.map(
+      model => model.name,
+    );
     this.outputTypesToGenerate = this.dmmfDocument.schema.outputTypes.filter(
       type => !modelNames.includes(type.name) && !rootTypes.includes(type),
     );
@@ -39,7 +51,7 @@ export class OutputBlockGenerator extends BaseBlockGenerator {
       .reduce((a, b) => a.concat(b), [])
       .filter(it => it.argsTypeName);
 
-    this.outputTypesToGenerate.forEach((type) => {
+    this.outputTypesToGenerate.forEach(type => {
       generateOutputTypeClassFromType(
         this.project,
         resolversDirPath,
@@ -49,9 +61,11 @@ export class OutputBlockGenerator extends BaseBlockGenerator {
     });
 
     if (outputTypesFieldsArgsToGenerate.length > 0) {
-      outputTypesFieldsArgsToGenerate.forEach((field) => {
+      outputTypesFieldsArgsToGenerate.forEach(field => {
         if (!field.argsTypeName) {
-          throw new Error(`Expected argsTypeName to be defined for field after filtering, but got ${field.argsTypeName}`);
+          throw new Error(
+            `Expected argsTypeName to be defined for field after filtering, but got ${field.argsTypeName}`,
+          );
         }
         generateArgsTypeClassFromArgs(
           this.project,
@@ -78,7 +92,9 @@ export class OutputBlockGenerator extends BaseBlockGenerator {
         outputsArgsBarrelExportSourceFile,
         outputTypesFieldsArgsToGenerate.map(it => {
           if (!it.argsTypeName) {
-            throw new Error(`Expected argsTypeName to be defined after filtering, but got ${it.argsTypeName}`);
+            throw new Error(
+              `Expected argsTypeName to be defined after filtering, but got ${it.argsTypeName}`,
+            );
           }
           return it.argsTypeName;
         }),
@@ -99,7 +115,7 @@ export class OutputBlockGenerator extends BaseBlockGenerator {
       outputsBarrelExportSourceFile,
       this.outputTypesToGenerate.map(it => it.typeName),
       this.outputTypesToGenerate.some(type =>
-        type.fields.some(field => field.argsTypeName)
+        type.fields.some(field => field.argsTypeName),
       ),
     );
 

@@ -49,7 +49,9 @@ export class DmmfDocument implements DMMF.Document {
     this.modelFieldsCache = new Map();
     this.outputTypeFieldsCache = new Map();
 
-    const enumTypes = (schema.enumTypes.prisma ?? []).concat(schema.enumTypes.model ?? []);
+    const enumTypes = (schema.enumTypes.prisma ?? []).concat(
+      schema.enumTypes.model ?? [],
+    );
     const models = datamodel.models.concat(datamodel.types);
 
     // transform bare model without fields
@@ -59,10 +61,8 @@ export class DmmfDocument implements DMMF.Document {
 
     // then transform once again to map the fields (it requires mapped model type names)
     // this also inits the modelTypeNameCache and fieldAliasCache
-    this.models = models.map((model) => {
-      const transformed = transformModelWithFields(this)(model)
-
-
+    this.models = models.map(model => {
+      const transformed = transformModelWithFields(this)(model);
 
       this.modelsCache.set(model.name, transformed);
       this.modelTypeNameCache.add(transformed.typeName);
@@ -91,7 +91,7 @@ export class DmmfDocument implements DMMF.Document {
     });
 
     // transform enums again to map renamed fields
-    this.enums = enumTypes.map((enumType) => {
+    this.enums = enumTypes.map(enumType => {
       const transformed = transformEnums(this)(enumType);
       this.enumsCache.set(enumType.name, transformed);
       return transformed;
@@ -133,15 +133,13 @@ export class DmmfDocument implements DMMF.Document {
       )
       .filter(model => {
         const outputType = this.outputTypeCache.get(model.name);
-        return (
-          outputType?.fields.some(outputTypeField =>
-            model.fields.some(
-              modelField =>
-                modelField.name === outputTypeField.name &&
-                modelField.relationName !== undefined &&
-                !modelField.isOmitted.output,
-            ),
-          )
+        return outputType?.fields.some(outputTypeField =>
+          model.fields.some(
+            modelField =>
+              modelField.name === outputTypeField.name &&
+              modelField.relationName !== undefined &&
+              !modelField.isOmitted.output,
+          ),
         );
       })
       .map(generateRelationModel(this));
@@ -186,7 +184,10 @@ export class DmmfDocument implements DMMF.Document {
     return modelFields?.get(fieldName);
   }
 
-  getOutputTypeField(outputTypeName: string, fieldName: string): any | undefined {
+  getOutputTypeField(
+    outputTypeName: string,
+    fieldName: string,
+  ): any | undefined {
     const outputTypeFields = this.outputTypeFieldsCache.get(outputTypeName);
     return outputTypeFields?.get(fieldName);
   }

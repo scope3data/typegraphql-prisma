@@ -23,8 +23,12 @@ export function transformSchema(
   datamodel: PrismaDMMF.Schema,
   dmmfDocument: DmmfDocument,
 ): Omit<DMMF.Schema, "enums"> {
-  const inputObjectTypes = (datamodel.inputObjectTypes.prisma ?? []).concat(datamodel.inputObjectTypes.model ?? []);
-  const outputObjectTypes = (datamodel.outputObjectTypes.prisma ?? []).concat(datamodel.outputObjectTypes.model ?? []);
+  const inputObjectTypes = (datamodel.inputObjectTypes.prisma ?? []).concat(
+    datamodel.inputObjectTypes.model ?? [],
+  );
+  const outputObjectTypes = (datamodel.outputObjectTypes.prisma ?? []).concat(
+    datamodel.outputObjectTypes.model ?? [],
+  );
   return {
     inputTypes: inputObjectTypes
       .filter(uncheckedScalarInputsFilter(dmmfDocument))
@@ -157,7 +161,9 @@ function transformInputType(dmmfDocument: DmmfDocument) {
       fields: inputType.fields
         .filter(field => field.deprecation === undefined)
         .map<DMMF.SchemaArg>(field => {
-          const modelField = modelType ? dmmfDocument.getModelField(modelType.name, field.name) : undefined;
+          const modelField = modelType
+            ? dmmfDocument.getModelField(modelType.name, field.name)
+            : undefined;
           const typeName = modelField?.typeFieldAlias ?? field.name;
           const selectedInputType = selectInputTypeFromTypes(dmmfDocument)(
             field.inputTypes,
@@ -324,7 +330,7 @@ export function getMappedOutputTypeName(
     }
   } else {
     const dedicatedTypeSuffix = DEDICATED_TYPE_SUFFIXES.find(suffix =>
-      outputTypeName.endsWith(suffix)
+      outputTypeName.endsWith(suffix),
     );
     if (dedicatedTypeSuffix) {
       const modelName = outputTypeName.slice(0, -dedicatedTypeSuffix.length);
@@ -350,7 +356,9 @@ function transformMapping(
 
     const model = dmmfDocument.modelsCache.get(modelName);
     if (!model) {
-      throw new Error(`Cannot find model ${modelName} in root types definitions!`);
+      throw new Error(
+        `Cannot find model ${modelName} in root types definitions!`,
+      );
     }
 
     const actions = (
@@ -370,7 +378,10 @@ function transformMapping(
         );
       }
 
-      const method = dmmfDocument.getOutputTypeField(actionOutputType.name, fieldName);
+      const method = dmmfDocument.getOutputTypeField(
+        actionOutputType.name,
+        fieldName,
+      );
       if (!method) {
         throw new Error(`Method not found for ${fieldName}`);
       }
@@ -610,7 +621,10 @@ export function generateRelationModel(dmmfDocument: DmmfDocument) {
           outputType.fields.some(it => it.name === field.name),
       )
       .map<DMMF.RelationField>(field => {
-        const outputTypeField = dmmfDocument.getOutputTypeField(outputType.name, field.name)!;
+        const outputTypeField = dmmfDocument.getOutputTypeField(
+          outputType.name,
+          field.name,
+        )!;
         const argsTypeName =
           outputTypeField.args.length > 0
             ? `${model.typeName}${pascalCase(field.name)}Args`
