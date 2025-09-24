@@ -1023,6 +1023,42 @@ Object {
         },
       ],
     },
+    Object {
+      "id": 7,
+      "name": "test1",
+      "posts": Array [],
+    },
+    Object {
+      "id": 8,
+      "name": "test2",
+      "posts": Array [
+        Object {
+          "author": Object {
+            "name": "test2",
+          },
+          "color": "RED",
+          "content": "post content",
+        },
+      ],
+    },
+    Object {
+      "id": 10,
+      "name": "test1",
+      "posts": Array [],
+    },
+    Object {
+      "id": 11,
+      "name": "test2",
+      "posts": Array [
+        Object {
+          "author": Object {
+            "name": "test2",
+          },
+          "color": "RED",
+          "content": "post content",
+        },
+      ],
+    },
   ],
 }
 `;

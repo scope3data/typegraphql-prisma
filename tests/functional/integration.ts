@@ -12,6 +12,11 @@ import { getDirectoryStructureString } from "../helpers/structure";
 
 const exec = util.promisify(childProcess.exec);
 
+// Helper function to filter out Prisma update notifications from stderr
+function filterPrismaUpdateNotifications(stderr: string): string {
+  return stderr.replace(/┌─.*?└─.*?┘\s*/gs, "").trim();
+}
+
 describe("generator integration", () => {
   let cwdDirPath: string;
   let schema: string;
@@ -73,7 +78,9 @@ describe("generator integration", () => {
       cwdDirPath + "/generated/type-graphql",
     );
 
-    expect(prismaGenerateResult.stderr).toHaveLength(0);
+    expect(
+      filterPrismaUpdateNotifications(prismaGenerateResult.stderr),
+    ).toHaveLength(0);
     expect(directoryStructureString).toMatchSnapshot("files structure");
   }, 60000);
 
@@ -102,7 +109,9 @@ describe("generator integration", () => {
       encoding: "utf8",
     });
 
-    expect(prismaGenerateResult.stderr).toHaveLength(0);
+    expect(
+      filterPrismaUpdateNotifications(prismaGenerateResult.stderr),
+    ).toHaveLength(0);
     expect(graphQLSchemaSDL).toMatchSnapshot("graphQLSchemaSDL");
   }, 60000);
 
@@ -138,7 +147,9 @@ describe("generator integration", () => {
       cwd: typegraphqlfolderPath,
     });
 
-    expect(prismaGenerateResult.stderr).toHaveLength(0);
+    expect(
+      filterPrismaUpdateNotifications(prismaGenerateResult.stderr),
+    ).toHaveLength(0);
     expect(tscResult.stdout).toHaveLength(0);
     expect(tscResult.stderr).toHaveLength(0);
   }, 60000);
@@ -148,7 +159,9 @@ describe("generator integration", () => {
       cwd: cwdDirPath,
     });
     // console.log(prismaGenerateResult);
-    expect(prismaGenerateResult.stderr).toHaveLength(0);
+    expect(
+      filterPrismaUpdateNotifications(prismaGenerateResult.stderr),
+    ).toHaveLength(0);
 
     // drop database before migrate
     const originalDatabaseUrl = process.env.TEST_DATABASE_URL!;
@@ -169,7 +182,9 @@ describe("generator integration", () => {
       { cwd: cwdDirPath },
     );
     // console.log(prismaPushResult);
-    expect(prismaPushResult.stderr).toHaveLength(0);
+    expect(
+      filterPrismaUpdateNotifications(prismaPushResult.stderr),
+    ).toHaveLength(0);
 
     const { PrismaClient } = require(cwdDirPath + "/generated/client");
     const prisma = new PrismaClient();
