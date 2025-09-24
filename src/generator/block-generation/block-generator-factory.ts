@@ -13,19 +13,19 @@ import {
   type GenerationMetrics,
 } from "./index";
 
-type CleanGeneratorOptions = Omit<GeneratorOptions, 'useWorkerThreads'>;
+
 
 export class BlockGeneratorFactory {
   private project: Project;
   private dmmfDocument: DmmfDocument;
-  private options: CleanGeneratorOptions;
+  private options: GeneratorOptions;
   private baseDirPath: string;
   private generators: Map<string, BaseBlockGenerator> = new Map();
 
   constructor(
     project: Project,
     dmmfDocument: DmmfDocument,
-    options: CleanGeneratorOptions,
+    options: GeneratorOptions,
     baseDirPath: string,
   ) {
     this.project = project;

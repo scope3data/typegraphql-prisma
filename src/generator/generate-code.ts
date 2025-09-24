@@ -18,7 +18,6 @@ import type {
 import { DmmfDocument } from "./dmmf/dmmf-document";
 import { BlockGeneratorFactory } from "./block-generation/block-generator-factory";
 
-type GeneratorOptions = Omit<BaseGeneratorOptions, 'useWorkerThreads'>;
 import { ensureInstalledCorrectPrismaPackage } from "../utils/prisma-version";
 import { generateEnhanceMap } from "./generate-enhance";
 import { generateCustomScalars } from "./generate-scalars";
@@ -64,7 +63,7 @@ class CodeGenerator {
     const startTime = performance.now();
     ensureInstalledCorrectPrismaPackage();
 
-    const options: GeneratorOptions = Object.assign({}, baseOptions, {
+    const options: BaseGeneratorOptions = Object.assign({}, baseOptions, {
       blocksToEmit: getBlocksToEmit(baseOptions.emitOnly),
       contextPrismaKey: baseOptions.contextPrismaKey ?? "prisma",
       relativePrismaOutputPath: toUnixPath(

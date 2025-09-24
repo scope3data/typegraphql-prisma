@@ -86,3 +86,37 @@ This way you can save even up to 33% of the generation process time.
 :::info
 When the generator is configured to emit transpiled code, the generated JS code is always formatted by TypeScript compiler and you can't change it to Prettier or disable the formatting by the `formatGeneratedCode` option.
 :::
+
+## Verbose logging
+
+By default, the generator runs quietly and only shows essential information. However, during development or debugging, you might want to see detailed timing information and performance metrics for each generation phase.
+
+You can enable verbose logging by setting the `verboseLogging` option to `true`:
+
+```prisma {4}
+generator typegraphql {
+  provider       = "typegraphql-prisma"
+  output         = "../prisma/generated/type-graphql"
+  verboseLogging = true
+}
+```
+
+When enabled, the generator will output detailed information including:
+
+- Directory setup time
+- DMMF generation time
+- Configuration parsing time
+- Detailed DMMF comparison statistics
+- Code generation phase timings
+- Performance metrics and insights
+- Total generation time breakdown
+
+This is particularly useful for:
+
+- Performance analysis and optimization
+- Debugging generation issues
+- Understanding which parts of your schema take the most time to process
+
+:::tip
+Keep `verboseLogging` disabled in production environments to reduce console noise and improve performance.
+:::

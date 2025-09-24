@@ -15,6 +15,11 @@ export class SimpleMetricsCollector implements MetricsListener {
   private metrics: MetricData[] = [];
   private phaseTimings: Map<string, number[]> = new Map();
   private startTime: number = Date.now();
+  private verboseLogging: boolean;
+
+  constructor(verboseLogging: boolean = false) {
+    this.verboseLogging = verboseLogging;
+  }
 
   emitMetric(phase: string, duration?: number, count?: number, details?: Record<string, any>): void {
     const metric: MetricData = {
@@ -50,10 +55,16 @@ export class SimpleMetricsCollector implements MetricsListener {
       parts.push(`(${metric.count} items)`);
     }
 
-    console.log(`📊 ${parts.join(' - ')}`);
+    if (this.verboseLogging) {
+      console.log(`📊 ${parts.join(' - ')}`);
+    }
   }
 
   onComplete(): void {
+    if (!this.verboseLogging) {
+      return;
+    }
+
     console.log('\n📈 GENERATION METRICS SUMMARY');
     console.log('='.repeat(50));
 

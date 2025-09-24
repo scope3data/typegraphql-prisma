@@ -2,18 +2,18 @@ import type { Project } from "ts-morph";
 import type { DmmfDocument } from "../dmmf/dmmf-document";
 import type { GeneratorOptions } from "../options";
 
-type CleanGeneratorOptions = Omit<GeneratorOptions, 'useWorkerThreads'>;
+
 
 export abstract class BaseBlockGenerator {
   protected project: Project;
   protected dmmfDocument: DmmfDocument;
-  protected options: CleanGeneratorOptions;
+  protected options: GeneratorOptions;
   protected baseDirPath: string;
 
   constructor(
     project: Project,
     dmmfDocument: DmmfDocument,
-    options: CleanGeneratorOptions,
+    options: GeneratorOptions,
     baseDirPath: string,
   ) {
     this.project = project;
