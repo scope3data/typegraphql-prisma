@@ -163,20 +163,7 @@ describe("generator integration", () => {
       filterPrismaUpdateNotifications(prismaGenerateResult.stderr),
     ).toHaveLength(0);
 
-    // drop database before migrate
-    const originalDatabaseUrl = process.env.TEST_DATABASE_URL!;
-    const [dbName, ...databaseUrlParts] = originalDatabaseUrl
-      .split("/")
-      .reverse();
-    const databaseUrl = databaseUrlParts.reverse().join("/") + "/postgres";
-    const pgClient = new pg.Client({
-      connectionString: databaseUrl,
-    });
-    await pgClient.connect();
-    await pgClient.query(`DROP DATABASE IF EXISTS "${dbName}"`);
-    await pgClient.query(`CREATE DATABASE "${dbName}"`);
-    await pgClient.end();
-
+    // Push schema to database (will create/update schema)
     const prismaPushResult = await exec(
       "npx prisma db push --accept-data-loss",
       { cwd: cwdDirPath },
