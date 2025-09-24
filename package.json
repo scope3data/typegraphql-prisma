@@ -10,7 +10,7 @@
     "check:type": "tsc --noEmit --skipLibCheck",
     "check:experiments:postgres": "cd ./experiments/postgres && tsc --noEmit --skipLibCheck",
     "check:experiments:mongodb": "cd ./experiments/mongodb && tsc --noEmit --skipLibCheck",
-    "check:format": "echo 'Node:' && node --version && echo 'Prettier:' && ./node_modules/.bin/prettier --version && ./node_modules/.bin/prettier --ignore-path ./.cli.prettierignore --check '**/*.{js,json,ts,tsx}'",
+    "check:format": "./node_modules/.bin/prettier --ignore-path ./.cli.prettierignore --check '**/*.{js,json,ts,tsx}'",
     "test": "ts-node ./tests/helpers/setup-tests.ts && jest --verbose",
     "test:integration": "ts-node ./tests/helpers/setup-tests.ts && env-cmd jest --watch --verbose --config ./jest.config.integration.ts",
     "test:ci": "ts-node ./tests/helpers/setup-tests.ts && jest --coverage --verbose --runInBand && jest --coverage --verbose --runInBand --config ./jest.config.integration.ts",
