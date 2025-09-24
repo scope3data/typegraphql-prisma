@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-import { performance } from 'node:perf_hooks';
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
-import { getDMMF } from '@prisma/internals';
-import { Command } from 'commander';
-import generateCode from './generator/generate-code';
-import { SimpleMetricsCollector } from './generator/metrics';
-import { GeneratorOptions } from './generator/options';
+import { performance } from "node:perf_hooks";
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import { getDMMF } from "@prisma/internals";
+import { Command } from "commander";
+import generateCode from "./generator/generate-code";
+import { SimpleMetricsCollector } from "./generator/metrics";
+import { GeneratorOptions } from "./generator/options";
 
 interface BenchmarkOptions {
   schemaPath: string;
@@ -28,8 +28,8 @@ class CodeGenerationBenchmark {
   }
 
   async run(): Promise<void> {
-    console.log('🚀 TypeGraphQL-Prisma Code Generation Benchmark');
-    console.log('='.repeat(60));
+    console.log("🚀 TypeGraphQL-Prisma Code Generation Benchmark");
+    console.log("=".repeat(60));
     console.log(`📋 Schema: ${this.options.schemaPath}`);
     console.log(`📁 Output: ${this.options.outputDir}`);
     console.log(`🔄 Iterations: ${this.options.iterations}`);
@@ -39,11 +39,13 @@ class CodeGenerationBenchmark {
       await this.validateSchemaFile();
 
       // Read and analyze schema
-      const schemaContent = await fs.readFile(this.options.schemaPath, 'utf-8');
-      console.log(`📊 Schema size: ${Math.round(schemaContent.length / 1024)}KB`);
+      const schemaContent = await fs.readFile(this.options.schemaPath, "utf-8");
+      console.log(
+        `📊 Schema size: ${Math.round(schemaContent.length / 1024)}KB`,
+      );
 
       // Parse DMMF
-      console.log('\n⏳ Parsing schema...');
+      console.log("\n⏳ Parsing schema...");
       const parseStart = performance.now();
       const dmmf = await getDMMF({
         datamodel: schemaContent,
@@ -63,9 +65,8 @@ class CodeGenerationBenchmark {
       if (this.options.cleanup) {
         await this.cleanup();
       }
-
     } catch (error) {
-      console.error('❌ Benchmark failed:', error);
+      console.error("❌ Benchmark failed:", error);
       if (error instanceof Error) {
         console.error(error.stack);
       }
@@ -84,11 +85,16 @@ class CodeGenerationBenchmark {
   private analyzeSchema(dmmf: any): void {
     const models = dmmf.datamodel.models.length;
     const enums = dmmf.datamodel.enums.length;
-    const inputTypes = (dmmf.schema.inputObjectTypes.prisma?.length || 0) + (dmmf.schema.inputObjectTypes.model?.length || 0);
-    const outputTypes = dmmf.schema.outputObjectTypes.prisma.length + dmmf.schema.outputObjectTypes.model.length;
-    const totalComplexity = models * 10 + enums * 2 + inputTypes * 1 + outputTypes * 3;
+    const inputTypes =
+      (dmmf.schema.inputObjectTypes.prisma?.length || 0) +
+      (dmmf.schema.inputObjectTypes.model?.length || 0);
+    const outputTypes =
+      dmmf.schema.outputObjectTypes.prisma.length +
+      dmmf.schema.outputObjectTypes.model.length;
+    const totalComplexity =
+      models * 10 + enums * 2 + inputTypes * 1 + outputTypes * 3;
 
-    console.log('\n📊 Schema Statistics:');
+    console.log("\n📊 Schema Statistics:");
     console.log(`  Models: ${models}`);
     console.log(`  Enums: ${enums}`);
     console.log(`  Input Types: ${inputTypes}`);
@@ -96,11 +102,18 @@ class CodeGenerationBenchmark {
     console.log(`  Complexity Score: ${totalComplexity}`);
   }
 
-  private async runIterations(dmmf: any): Promise<Array<{ iteration: number; totalTime: number; metrics: any[] }>> {
-    const results: Array<{ iteration: number; totalTime: number; metrics: any[] }> = [];
+  private async runIterations(
+    dmmf: any,
+  ): Promise<Array<{ iteration: number; totalTime: number; metrics: any[] }>> {
+    const results: Array<{
+      iteration: number;
+      totalTime: number;
+      metrics: any[];
+    }> = [];
+    const iterations = this.options.iterations || 1;
 
-    for (let i = 0; i < this.options.iterations!; i++) {
-      console.log(`\n🔄 Running iteration ${i + 1}/${this.options.iterations}...`);
+    for (let i = 0; i < iterations; i++) {
+      console.log(`\n🔄 Running iteration ${i + 1}/${iterations}...`);
 
       // Clean output directory
       await this.prepareOutputDirectory();
@@ -111,14 +124,21 @@ class CodeGenerationBenchmark {
       // Setup generation options
       const generatorOptions: GeneratorOptions = {
         outputDirPath: this.options.outputDir,
-        prismaClientPath: './node_modules/.prisma/client',
+        prismaClientPath: "./node_modules/.prisma/client",
         emitTranspiledCode: false,
         formatGeneratedCode: false,
-        contextPrismaKey: 'prisma',
+        contextPrismaKey: "prisma",
         emitRedundantTypesInfo: false,
         emitIsAbstract: false,
-        blocksToEmit: ['enums', 'models', 'inputs', 'outputs', 'crudResolvers', 'relationResolvers'],
-        relativePrismaOutputPath: '../../../node_modules/.prisma/client',
+        blocksToEmit: [
+          "enums",
+          "models",
+          "inputs",
+          "outputs",
+          "crudResolvers",
+          "relationResolvers",
+        ],
+        relativePrismaOutputPath: "../../../node_modules/.prisma/client",
         customPrismaImportPath: undefined,
         omitInputFieldsByDefault: [],
         omitOutputFieldsByDefault: [],
@@ -131,8 +151,8 @@ class CodeGenerationBenchmark {
       await generateCode(
         dmmf,
         generatorOptions,
-        (msg: string) => {}, // Silent log function for cleaner output
-        metricsCollector
+        (_msg: string) => {}, // Silent log function for cleaner output
+        metricsCollector,
       );
 
       const iterationTime = performance.now() - iterationStart;
@@ -143,17 +163,21 @@ class CodeGenerationBenchmark {
         metrics: metricsCollector.getMetrics(),
       });
 
-      console.log(`✅ Iteration ${i + 1} completed in ${iterationTime.toFixed(2)}ms`);
+      console.log(
+        `✅ Iteration ${i + 1} completed in ${iterationTime.toFixed(2)}ms`,
+      );
     }
 
     return results;
   }
 
-  private async displayResults(results: Array<{ iteration: number; totalTime: number; metrics: any[] }>): Promise<void> {
+  private async displayResults(
+    results: Array<{ iteration: number; totalTime: number; metrics: any[] }>,
+  ): Promise<void> {
     if (results.length === 0) return;
 
-    console.log('\n📈 FINAL BENCHMARK RESULTS');
-    console.log('='.repeat(60));
+    console.log("\n📈 FINAL BENCHMARK RESULTS");
+    console.log("=".repeat(60));
 
     if (results.length === 1) {
       console.log(`🕐 Generation Time: ${results[0].totalTime.toFixed(2)}ms`);
@@ -162,12 +186,19 @@ class CodeGenerationBenchmark {
       const avgTime = times.reduce((sum, time) => sum + time, 0) / times.length;
       const minTime = Math.min(...times);
       const maxTime = Math.max(...times);
-      const stdDev = Math.sqrt(times.reduce((sq, time) => sq + Math.pow(time - avgTime, 2), 0) / times.length);
+      const stdDev = Math.sqrt(
+        times.reduce((sq, time) => sq + Math.pow(time - avgTime, 2), 0) /
+          times.length,
+      );
 
       console.log(`🕐 Average Time: ${avgTime.toFixed(2)}ms`);
-      console.log(`📏 Min/Max: ${minTime.toFixed(2)}ms / ${maxTime.toFixed(2)}ms`);
+      console.log(
+        `📏 Min/Max: ${minTime.toFixed(2)}ms / ${maxTime.toFixed(2)}ms`,
+      );
       console.log(`📊 Std Deviation: ${stdDev.toFixed(2)}ms`);
-      console.log(`🎯 Consistency: ${((1 - stdDev/avgTime) * 100).toFixed(1)}%`);
+      console.log(
+        `🎯 Consistency: ${((1 - stdDev / avgTime) * 100).toFixed(1)}%`,
+      );
     }
 
     // Check generated files
@@ -179,7 +210,7 @@ class CodeGenerationBenchmark {
       const files = await this.countGeneratedFiles();
       console.log(`📁 Generated Files: ${files}`);
     } catch (error) {
-      console.log('📁 Could not count generated files');
+      console.log("📁 Could not count generated files");
     }
   }
 
@@ -193,7 +224,7 @@ class CodeGenerationBenchmark {
         for (const entry of entries) {
           if (entry.isDirectory()) {
             count += await countFilesRecursively(path.join(dir, entry.name));
-          } else if (entry.name.endsWith('.ts')) {
+          } else if (entry.name.endsWith(".ts")) {
             count++;
           }
         }
@@ -220,9 +251,9 @@ class CodeGenerationBenchmark {
   private async cleanup(): Promise<void> {
     try {
       await fs.rm(this.options.outputDir, { recursive: true, force: true });
-      console.log('\n🧹 Cleaned up output directory');
+      console.log("\n🧹 Cleaned up output directory");
     } catch (error) {
-      console.log('\n⚠️  Could not clean up output directory');
+      console.log("\n⚠️  Could not clean up output directory");
     }
   }
 }
@@ -232,38 +263,43 @@ function parseArgs(): BenchmarkOptions {
   const program = new Command();
 
   program
-    .name('benchmark-code')
-    .description('🚀 TypeGraphQL-Prisma Code Generation Benchmark')
-    .version('1.0.0')
+    .name("benchmark-code")
+    .description("🚀 TypeGraphQL-Prisma Code Generation Benchmark")
+    .version("1.0.0")
     .option(
-      '-s, --schema <path>',
-      'Path to Prisma schema file',
-      './test-schemas/large-schema.prisma'
+      "-s, --schema <path>",
+      "Path to Prisma schema file",
+      "./test-schemas/large-schema.prisma",
     )
     .option(
-      '-o, --output <path>',
-      'Output directory for generated files',
-      './benchmark-output'
+      "-o, --output <path>",
+      "Output directory for generated files",
+      "./benchmark-output",
     )
     .option(
-      '-i, --iterations <number>',
-      'Number of iterations to run',
-      (value) => {
+      "-i, --iterations <number>",
+      "Number of iterations to run",
+      value => {
         const parsed = parseInt(value, 10);
         if (isNaN(parsed) || parsed < 1) {
-          throw new Error('Invalid iterations count - must be a positive integer');
+          throw new Error(
+            "Invalid iterations count - must be a positive integer",
+          );
         }
         return parsed;
       },
-      1
+      1,
     )
-    .option('--no-cleanup', 'Keep generated files after benchmark')
-    .addHelpText('after', `
+    .option("--no-cleanup", "Keep generated files after benchmark")
+    .addHelpText(
+      "after",
+      `
 Examples:
   npm run benchmark-code
   npm run benchmark-code -- --schema ./test-schemas/small-schema.prisma
   npm run benchmark-code -- --schema ./my-schema.prisma --iterations 5
-  npm run benchmark-code -- --no-cleanup --output ./my-output`);
+  npm run benchmark-code -- --no-cleanup --output ./my-output`,
+    );
 
   program.parse();
   const options = program.opts();
@@ -284,7 +320,10 @@ if (require.main === module) {
       const benchmark = new CodeGenerationBenchmark(options);
       await benchmark.run();
     } catch (error) {
-      console.error('❌ Error:', error instanceof Error ? error.message : error);
+      console.error(
+        "❌ Error:",
+        error instanceof Error ? error.message : error,
+      );
       process.exit(1);
     }
   })();

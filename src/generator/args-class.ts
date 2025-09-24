@@ -1,10 +1,11 @@
 import {
-  PropertyDeclarationStructure,
-  OptionalKind,
-  Project,
+  type PropertyDeclarationStructure,
+  type OptionalKind,
+  type Project,
   Writers,
+  type SourceFile
 } from "ts-morph";
-import path from "path";
+import path from "node:path";
 
 import { argsFolderName } from "./config";
 import {
@@ -13,17 +14,17 @@ import {
   generateEnumsImports,
   generateGraphQLScalarsImport,
 } from "./imports";
-import { DmmfDocument } from "./dmmf/dmmf-document";
-import { DMMF } from "./dmmf/types";
+import type { DmmfDocument } from "./dmmf/dmmf-document";
+import type { DMMF } from "./dmmf/types";
 
 export default function generateArgsTypeClassFromArgs(
   project: Project,
   generateDirPath: string,
   fields: readonly DMMF.SchemaArg[],
   argsTypeName: string,
-  dmmfDocument: DmmfDocument,
+  _dmmfDocument: DmmfDocument,
   inputImportsLevel = 3,
-) {
+): SourceFile {
   const dirPath = path.resolve(generateDirPath, argsFolderName);
   const filePath = path.resolve(dirPath, `${argsTypeName}.ts`);
   const sourceFile = project.createSourceFile(filePath, undefined, {
@@ -79,4 +80,6 @@ export default function generateArgsTypeClassFromArgs(
       };
     }),
   });
+
+  return sourceFile;
 }

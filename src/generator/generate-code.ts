@@ -1,10 +1,11 @@
 import path from "node:path";
-import { exec } from "node:child_process";
+import fs from "node:fs";
 import { promisify } from "node:util";
 import { performance } from "node:perf_hooks";
+import { exec } from "node:child_process";
 
 import type { DMMF as PrismaDMMF } from "@prisma/generator-helper";
-import { Project, ScriptTarget, ModuleKind, type CompilerOptions } from "ts-morph";
+import { Project, ScriptTarget, ModuleKind, type CompilerOptions, SourceFile } from "ts-morph";
 
 import { noop, toUnixPath } from "./helpers";
 import generateEnumFromDef from "./enum";
@@ -40,9 +41,12 @@ import {
 import type {
   InternalGeneratorOptions,
   ExternalGeneratorOptions,
-  GeneratorOptions,
+  GeneratorOptions as BaseGeneratorOptions,
 } from "./options";
+
 import { DmmfDocument } from "./dmmf/dmmf-document";
+
+type GeneratorOptions = Omit<BaseGeneratorOptions, 'useWorkerThreads'>;
 import generateArgsTypeClassFromArgs from "./args-class";
 import generateActionResolverClass from "./resolvers/separate-action";
 import { ensureInstalledCorrectPrismaPackage } from "../utils/prisma-version";
@@ -416,170 +420,17 @@ class CodeGenerator {
     if (dmmfDocument.shouldGenerateBlock("crudResolvers")) {
       log("Generating crud resolvers...");
       const crudResolverStart = performance.now();
-      dmmfDocument.modelMappings.forEach(mapping => {
-        // Use cached model lookup instead of find()
-        const model = dmmfDocument.modelsCache.get(mapping.modelName);
-        if (!model) {
-          throw new Error(`No model found for mapping ${mapping.modelName}. This indicates a problem with the DMMF document processing.`);
-        }
 
-        generateCrudResolverClassFromMapping(
-          project,
-          baseDirPath,
-          mapping,
-          model,
-          dmmfDocument,
-          options,
-        );
-
-        mapping.actions.forEach((action) => {
-          generateActionResolverClass(
-            project,
-            baseDirPath,
-            model,
-            action,
-            mapping,
-            dmmfDocument,
-            options,
-          );
-        });
-      });
-
-      // Generate CRUD resolver barrel files
-      const generateMappingData = dmmfDocument.modelMappings
-        .map(mapping => {
-          const model = dmmfDocument.modelsCache.get(mapping.modelName);
-          if (!model) {
-            throw new Error(`No model found for mapping ${mapping.modelName} when generating mapping data. This indicates a problem with the DMMF document processing.`);
-          }
-          return {
-            modelName: model.typeName,
-            resolverName: mapping.resolverName,
-            actionResolverNames: mapping.actions.map(it => it.actionResolverName),
-          } as GenerateMappingData;
-        })
-        .filter((item: GenerateMappingData | null): item is GenerateMappingData => item !== null);
-
-      const crudResolversBarrelExportSourceFile = project.createSourceFile(
-        path.resolve(
-          baseDirPath,
-          resolversFolderName,
-          crudResolversFolderName,
-          "resolvers-crud.index.ts",
-        ),
-        undefined,
-        { overwrite: true },
-      );
-      generateResolversBarrelFile(
-        crudResolversBarrelExportSourceFile,
-        generateMappingData,
-      );
-
-      const crudResolversActionsBarrelExportSourceFile = project.createSourceFile(
-        path.resolve(
-          baseDirPath,
-          resolversFolderName,
-          crudResolversFolderName,
-          "resolvers-actions.index.ts",
-        ),
-        undefined,
-        { overwrite: true },
-      );
-      generateResolversActionsBarrelFile(
-        crudResolversActionsBarrelExportSourceFile,
-        generateMappingData,
-      );
-
-      const crudResolversIndexSourceFile = project.createSourceFile(
-        path.resolve(
-          baseDirPath,
-          resolversFolderName,
-          crudResolversFolderName,
-          "index.ts",
-        ),
-        undefined,
-        { overwrite: true },
-      );
-      generateResolversIndexFile(crudResolversIndexSourceFile, "crud", true);
+      await this.generateCRUDResolvers(project, dmmfDocument, options, baseDirPath);
 
       this.metrics?.emitMetric('crud-resolver-generation', performance.now() - crudResolverStart, dmmfDocument.modelMappings.length);
-
-      log("Generating crud resolvers args...");
-      const crudArgsStart = performance.now();
-      dmmfDocument.modelMappings.forEach(mapping => {
-        const actionsWithArgs = mapping.actions.filter(
-          it => it.argsTypeName !== undefined,
-        );
-
-        if (actionsWithArgs.length) {
-          const model = dmmfDocument.modelsCache.get(mapping.modelName);
-          if (!model) {
-            throw new Error(`No model found for mapping ${mapping.modelName} when generating CRUD resolver args. This indicates a problem with the DMMF document processing.`);
-          }
-          const resolverDirPath = path.resolve(
-            baseDirPath,
-            resolversFolderName,
-            crudResolversFolderName,
-            model.typeName,
-          );
-
-          actionsWithArgs.forEach((action) => {
-            if (!action.argsTypeName) {
-              throw new Error(`Expected argsTypeName to be defined for CRUD action after filtering, but got ${action.argsTypeName}`);
-            }
-            generateArgsTypeClassFromArgs(
-              project,
-              resolverDirPath,
-              action.method.args,
-              action.argsTypeName,
-              dmmfDocument,
-            );
-          });
-
-          const barrelExportSourceFile = project.createSourceFile(
-            path.resolve(resolverDirPath, argsFolderName, "index.ts"),
-            undefined,
-            { overwrite: true },
-          );
-          generateArgsBarrelFile(
-            barrelExportSourceFile,
-            actionsWithArgs.map(it => {
-              if (!it.argsTypeName) {
-                throw new Error(`Expected argsTypeName to be defined for CRUD action after filtering, but got ${it.argsTypeName}`);
-              }
-              return it.argsTypeName;
-            }),
-          );
-        }
-      });
-
-      const crudResolversArgsIndexSourceFile = project.createSourceFile(
-        path.resolve(
-          baseDirPath,
-          resolversFolderName,
-          crudResolversFolderName,
-          "args.index.ts",
-        ),
-        undefined,
-        { overwrite: true },
-      );
-      generateArgsIndexFile(
-        crudResolversArgsIndexSourceFile,
-        dmmfDocument.modelMappings
-          .filter(mapping =>
-            mapping.actions.some(it => it.argsTypeName !== undefined),
-          )
-          .map(mapping => mapping.modelTypeName),
-      );
-
-      this.metrics?.emitMetric('crud-resolver-args', performance.now() - crudArgsStart);
     }
 
     // Generate auxiliary files
     log("Generate auxiliary files");
     const auxiliaryStart = performance.now();
     const enhanceSourceFile = project.createSourceFile(
-      baseDirPath + "/enhance.ts",
+      `${baseDirPath}/enhance.ts`,
       undefined,
       { overwrite: true },
     );
@@ -594,21 +445,21 @@ class CodeGenerator {
     );
 
     const scalarsSourceFile = project.createSourceFile(
-      baseDirPath + "/scalars.ts",
+      `${baseDirPath}/scalars.ts`,
       undefined,
       { overwrite: true },
     );
     generateCustomScalars(scalarsSourceFile, dmmfDocument.options);
 
     const helpersSourceFile = project.createSourceFile(
-      baseDirPath + "/helpers.ts",
+      `${baseDirPath}/helpers.ts`,
       undefined,
       { overwrite: true },
     );
     generateHelpersFile(helpersSourceFile, dmmfDocument.options);
 
     const indexSourceFile = project.createSourceFile(
-      baseDirPath + "/index.ts",
+      `${baseDirPath}/index.ts`,
       undefined,
       { overwrite: true },
     );
@@ -617,38 +468,232 @@ class CodeGenerator {
       dmmfDocument.relationModels.length > 0,
       dmmfDocument.options.blocksToEmit,
     );
-
     this.metrics?.emitMetric('auxiliary-files', performance.now() - auxiliaryStart);
 
-    // Emit generated code files
-    log("Emitting generated code files");
+    log("Emitting final code");
     const emitStart = performance.now();
     if (emitTranspiledCode) {
+      log("Transpiling generated code");
       await project.emit();
     } else {
-      if (options.formatGeneratedCode === "tsc") {
-        const tscFormatStart = performance.now();
-        const sourceFiles = project.getSourceFiles();
-        sourceFiles.forEach((file) => {
-          file.formatText({ indentSize: 2 });
-        });
-        this.metrics?.emitMetric('tsc-formatting', performance.now() - tscFormatStart, sourceFiles.length);
-      }
-
+      log("Saving generated code");
       const saveStart = performance.now();
       await project.save();
-      this.metrics?.emitMetric('file-writing', performance.now() - saveStart);
+      this.metrics?.emitMetric('save-files', performance.now() - saveStart);
+    }
 
-      if (options.formatGeneratedCode === "prettier") {
-        const prettierStart = performance.now();
-        await execa(`npx prettier --write --ignore-path .prettierignore ${baseDirPath}`);
-        this.metrics?.emitMetric('prettier-formatting', performance.now() - prettierStart);
+    // Format generated code if enabled
+    if (options.formatGeneratedCode) {
+      try {
+        log("Formatting generated code");
+        const formatStart = performance.now();
+
+        if (options.formatGeneratedCode === "tsc") {
+          // Use tsc for formatting
+          const tscArgs = [
+            "--noEmit",
+            "--project", baseDirPath,
+          ];
+          await execa(`tsc ${tscArgs.join(' ')}`, { cwd: baseDirPath });
+        } else {
+          // Use prettier for formatting (default or explicitly set to "prettier")
+          const prettierArgs = [
+            "--write",
+            `${baseDirPath}/**/*.ts`,
+            "--ignore-path", path.resolve(baseDirPath, ".prettierignore"),
+          ];
+
+          // Check if prettier config exists, if not use default config
+          try {
+            await fs.promises.access(path.resolve(baseDirPath, ".prettierrc"));
+          } catch {
+            prettierArgs.push("--config", JSON.stringify({
+              semi: true,
+              trailingComma: "es5",
+              singleQuote: false,
+              printWidth: 120,
+              tabWidth: 2,
+              useTabs: false,
+            }));
+          }
+
+          await execa(`prettier ${prettierArgs.join(' ')}`, { cwd: baseDirPath });
+        }
+
+        this.metrics?.emitMetric('code-formatting', performance.now() - formatStart);
+      } catch (error) {
+        // Don't fail the entire generation for formatting errors
+        log(`Warning: Code formatting failed: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
     this.metrics?.emitMetric('code-emission', performance.now() - emitStart);
     this.metrics?.emitMetric('total-generation', performance.now() - startTime);
     this.metrics?.onComplete?.();
+  }
+
+  private async generateCRUDResolvers(
+    project: Project,
+    dmmfDocument: DmmfDocument,
+    options: GeneratorOptions,
+    baseDirPath: string,
+  ): Promise<void> {
+    // Generate CRUD resolvers for each model mapping
+    dmmfDocument.modelMappings.forEach(mapping => {
+      // Use cached model lookup instead of find()
+      const model = dmmfDocument.modelsCache.get(mapping.modelName);
+      if (!model) {
+        throw new Error(`No model found for mapping ${mapping.modelName}. This indicates a problem with the DMMF document processing.`);
+      }
+
+      generateCrudResolverClassFromMapping(
+        project,
+        baseDirPath,
+        mapping,
+        model,
+        dmmfDocument,
+        options,
+      );
+
+      mapping.actions.forEach((action) => {
+        generateActionResolverClass(
+          project,
+          baseDirPath,
+          model,
+          action,
+          mapping,
+          dmmfDocument,
+          options,
+        );
+      });
+    });
+
+    // Generate CRUD resolver barrel files
+    const generateMappingData = dmmfDocument.modelMappings
+      .map(mapping => {
+        const model = dmmfDocument.modelsCache.get(mapping.modelName);
+        if (!model) {
+          throw new Error(`No model found for mapping ${mapping.modelName} when generating mapping data. This indicates a problem with the DMMF document processing.`);
+        }
+        return {
+          modelName: model.typeName,
+          resolverName: mapping.resolverName,
+          actionResolverNames: mapping.actions.map(it => it.actionResolverName),
+        } as GenerateMappingData;
+      })
+      .filter((item: GenerateMappingData | null): item is GenerateMappingData => item !== null);
+
+    const crudResolversBarrelExportSourceFile = project.createSourceFile(
+      path.resolve(
+        baseDirPath,
+        resolversFolderName,
+        crudResolversFolderName,
+        "resolvers-crud.index.ts",
+      ),
+      undefined,
+      { overwrite: true },
+    );
+    generateResolversBarrelFile(
+      crudResolversBarrelExportSourceFile,
+      generateMappingData,
+    );
+
+    const crudResolversActionsBarrelExportSourceFile = project.createSourceFile(
+      path.resolve(
+        baseDirPath,
+        resolversFolderName,
+        crudResolversFolderName,
+        "resolvers-actions.index.ts",
+      ),
+      undefined,
+      { overwrite: true },
+    );
+    generateResolversActionsBarrelFile(
+      crudResolversActionsBarrelExportSourceFile,
+      generateMappingData,
+    );
+
+    const crudResolversIndexSourceFile = project.createSourceFile(
+      path.resolve(
+        baseDirPath,
+        resolversFolderName,
+        crudResolversFolderName,
+        "index.ts",
+      ),
+      undefined,
+      { overwrite: true },
+    );
+    generateResolversIndexFile(crudResolversIndexSourceFile, "crud", true);
+
+    // Generate args
+    const crudArgsStart = performance.now();
+    dmmfDocument.modelMappings.forEach(mapping => {
+      const actionsWithArgs = mapping.actions.filter(
+        it => it.argsTypeName !== undefined,
+      );
+
+      if (actionsWithArgs.length) {
+        const model = dmmfDocument.modelsCache.get(mapping.modelName);
+        if (!model) {
+          throw new Error(`No model found for mapping ${mapping.modelName} when generating CRUD resolver args. This indicates a problem with the DMMF document processing.`);
+        }
+        const resolverDirPath = path.resolve(
+          baseDirPath,
+          resolversFolderName,
+          crudResolversFolderName,
+          model.typeName,
+        );
+
+        actionsWithArgs.forEach((action) => {
+          if (!action.argsTypeName) {
+            throw new Error(`Expected argsTypeName to be defined for CRUD action after filtering, but got ${action.argsTypeName}`);
+          }
+          generateArgsTypeClassFromArgs(
+            project,
+            resolverDirPath,
+            action.method.args,
+            action.argsTypeName,
+            dmmfDocument,
+          );
+        });
+
+        const barrelExportSourceFile = project.createSourceFile(
+          path.resolve(resolverDirPath, argsFolderName, "index.ts"),
+          undefined,
+          { overwrite: true },
+        );
+        generateArgsBarrelFile(
+          barrelExportSourceFile,
+          actionsWithArgs.map(it => {
+            if (!it.argsTypeName) {
+              throw new Error(`Expected argsTypeName to be defined for CRUD action after filtering, but got ${it.argsTypeName}`);
+            }
+            return it.argsTypeName;
+          }),
+        );
+      }
+    });
+
+    const crudResolversArgsIndexSourceFile = project.createSourceFile(
+      path.resolve(
+        baseDirPath,
+        resolversFolderName,
+        crudResolversFolderName,
+        "args.index.ts",
+      ),
+      undefined,
+      { overwrite: true },
+    );
+    generateArgsIndexFile(
+      crudResolversArgsIndexSourceFile,
+      dmmfDocument.modelMappings
+        .filter(mapping =>
+          mapping.actions.some(it => it.argsTypeName !== undefined),
+        )
+        .map(mapping => mapping.modelTypeName),
+    );
+
+    this.metrics?.emitMetric('crud-resolver-args', performance.now() - crudArgsStart);
   }
 }
 

@@ -14,8 +14,7 @@
     "test:integration": "ts-node ./tests/helpers/setup-tests.ts && env-cmd jest --watch --verbose --config ./jest.config.integration.ts",
     "test:ci": "ts-node ./tests/helpers/setup-tests.ts && jest --coverage --verbose --runInBand && jest --coverage --verbose --runInBand --config ./jest.config.integration.ts",
     "format": "prettier --ignore-path ./.cli.prettierignore --write ./**/*.{js,json,ts,tsx}",
-    "benchmark-code": "ts-node ./src/benchmark-generation.ts",
-    "dmmf-compare": "ts-node ./src/dmmf-compare.ts"
+    "benchmark-code": "node ./lib/benchmark-generation.js"
   },
   "bin": {
     "typegraphql-prisma": "lib/generator.js"

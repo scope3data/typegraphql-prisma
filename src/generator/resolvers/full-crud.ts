@@ -1,5 +1,5 @@
-import { OptionalKind, MethodDeclarationStructure, Project } from "ts-morph";
-import path from "path";
+import type { OptionalKind, MethodDeclarationStructure, Project, SourceFile } from "ts-morph";
+import path from "node:path";
 
 import { resolversFolderName, crudResolversFolderName } from "../config";
 import {
@@ -11,9 +11,9 @@ import {
   generateHelpersFileImport,
 } from "../imports";
 import { generateCrudResolverClassMethodDeclaration } from "./helpers";
-import { DmmfDocument } from "../dmmf/dmmf-document";
-import { DMMF } from "../dmmf/types";
-import { GeneratorOptions } from "../options";
+import type { DmmfDocument } from "../dmmf/dmmf-document";
+import type { DMMF } from "../dmmf/types";
+import type { GeneratorOptions } from "../options";
 
 export default function generateCrudResolverClassFromMapping(
   project: Project,
@@ -22,14 +22,14 @@ export default function generateCrudResolverClassFromMapping(
   model: DMMF.Model,
   dmmfDocument: DmmfDocument,
   generatorOptions: GeneratorOptions,
-) {
-  const resolverDirPath = path.resolve(
+): SourceFile
+{
+  const filePath = path.resolve(path.resolve(
     baseDirPath,
     resolversFolderName,
     crudResolversFolderName,
     model.typeName,
-  );
-  const filePath = path.resolve(resolverDirPath, `${mapping.resolverName}.ts`);
+  ), `${mapping.resolverName}.ts`);
   const sourceFile = project.createSourceFile(filePath, undefined, {
     overwrite: true,
   });
@@ -45,9 +45,7 @@ export default function generateCrudResolverClassFromMapping(
   );
   generateHelpersFileImport(sourceFile, 3);
 
-  const distinctOutputTypesNames = [
-    ...new Set(mapping.actions.map(it => it.outputTypeName)),
-  ];
+  const distinctOutputTypesNames = Array.from(new Set(mapping.actions.map(it => it.outputTypeName)))
   const modelOutputTypeNames = distinctOutputTypesNames.filter(typeName =>
     dmmfDocument.isModelTypeName(typeName),
   );
@@ -76,4 +74,6 @@ export default function generateCrudResolverClassFromMapping(
         ),
     ),
   });
+
+  return sourceFile;
 }

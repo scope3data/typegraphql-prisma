@@ -1,5 +1,5 @@
-import { Project } from "ts-morph";
-import path from "path";
+import type { Project, SourceFile } from "ts-morph";
+import path from "node:path";
 
 import { resolversFolderName, crudResolversFolderName } from "../config";
 import {
@@ -11,9 +11,9 @@ import {
   generateHelpersFileImport,
 } from "../imports";
 import { generateCrudResolverClassMethodDeclaration } from "./helpers";
-import { DmmfDocument } from "../dmmf/dmmf-document";
-import { DMMF } from "../dmmf/types";
-import { GeneratorOptions } from "../options";
+import type { DmmfDocument } from "../dmmf/dmmf-document";
+import type { DMMF } from "../dmmf/types";
+import type { GeneratorOptions } from "../options";
 
 export default function generateActionResolverClass(
   project: Project,
@@ -23,7 +23,7 @@ export default function generateActionResolverClass(
   mapping: DMMF.ModelMapping,
   dmmfDocument: DmmfDocument,
   generatorOptions: GeneratorOptions,
-) {
+): SourceFile {
   const sourceFile = project.createSourceFile(
     path.resolve(
       baseDirPath,
@@ -75,4 +75,6 @@ export default function generateActionResolverClass(
       ),
     ],
   });
+
+  return sourceFile;
 }

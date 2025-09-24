@@ -161,6 +161,84 @@ enum LogLevel {
   FATAL
 }
 
+enum CompanySize {
+  STARTUP
+  SMALL
+  MEDIUM
+  LARGE
+  ENTERPRISE
+}
+
+enum Industry {
+  TECHNOLOGY
+  HEALTHCARE
+  FINANCE
+  RETAIL
+  MANUFACTURING
+  EDUCATION
+  GOVERNMENT
+  NONPROFIT
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum CampaignType {
+  EMAIL
+  SMS
+  PUSH_NOTIFICATION
+  SOCIAL_MEDIA
+  DISPLAY_ADS
+  SEARCH_ADS
+}
+
+enum ReportType {
+  SALES
+  INVENTORY
+  CUSTOMER
+  MARKETING
+  FINANCIAL
+  OPERATIONAL
+}
+
+enum IntegrationType {
+  CRM
+  ERP
+  PAYMENT_GATEWAY
+  SHIPPING_PROVIDER
+  EMAIL_SERVICE
+  ANALYTICS
+  INVENTORY_MANAGEMENT
+}
+
+enum APIKeyStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+  SUSPENDED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
 // Models - many to test model generation performance
 model User {
   id              String    @id @default(cuid())
@@ -188,6 +266,8 @@ model User {
   auditLogs       AuditLog[]
   socialLogins    SocialLogin[]
   userPreferences UserPreference[]
+  employee        Employee?
+  loyaltyAccount  LoyaltyAccount?
 }
 
 model UserProfile {
@@ -272,15 +352,17 @@ model Product {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
-  category      Category         @relation(fields: [categoryId], references: [id])
-  brand         Brand?           @relation(fields: [brandId], references: [id])
-  vendor        Vendor?          @relation(fields: [vendorId], references: [id])
-  variants      ProductVariant[]
-  reviews       Review[]
-  orderItems    OrderItem[]
-  cartItems     CartItem[]
-  wishlistItems WishlistItem[]
-  inventories   Inventory[]
+  category        Category                @relation(fields: [categoryId], references: [id])
+  brand           Brand?                  @relation(fields: [brandId], references: [id])
+  vendor          Vendor?                 @relation(fields: [vendorId], references: [id])
+  variants        ProductVariant[]
+  reviews         Review[]
+  orderItems      OrderItem[]
+  cartItems       CartItem[]
+  wishlistItems   WishlistItem[]
+  inventories     Inventory[]
+  bundleItems     BundleItem[]
+  attributeValues ProductAttributeValue[]
 }
 
 model ProductVariant {
@@ -657,4 +739,383 @@ model SystemSetting {
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Company {
+  id           String      @id @default(cuid())
+  name         String      @unique
+  slug         String      @unique
+  description  String?
+  website      String?
+  logo         String?
+  size         CompanySize @default(SMALL)
+  industry     Industry
+  foundedYear  Int?
+  headquarters Json? // address object
+  taxId        String?
+  billingEmail String?
+  supportEmail String?
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  employees    Employee[]
+  departments  Department[]
+  projects     Project[]
+  integrations Integration[]
+  campaigns    Campaign[]
+  reports      Report[]
+  apiKeys      APIKey[]
+}
+
+model Employee {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  companyId    String
+  employeeId   String    @unique
+  departmentId String?
+  position     String
+  hireDate     DateTime
+  salary       Decimal?
+  manager      String? // references another employee
+  permissions  Json? // role-based permissions
+  isActive     Boolean   @default(true)
+  terminatedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user          User        @relation(fields: [userId], references: [id])
+  company       Company     @relation(fields: [companyId], references: [id])
+  department    Department? @relation(fields: [departmentId], references: [id])
+  assignedTasks Task[]      @relation("AssignedTasks")
+  createdTasks  Task[]      @relation("CreatedTasks")
+  timeEntries   TimeEntry[]
+}
+
+model Department {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  description String?
+  headId      String? // employee who heads this department
+  budget      Decimal?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  employees Employee[]
+  projects  Project[]
+
+  @@unique([companyId, name])
+}
+
+model Project {
+  id           String       @id @default(cuid())
+  companyId    String
+  departmentId String?
+  name         String
+  description  String?
+  status       TaskStatus   @default(TODO)
+  priority     TaskPriority @default(MEDIUM)
+  budget       Decimal?
+  startDate    DateTime?
+  endDate      DateTime?
+  completedAt  DateTime?
+  progress     Int          @default(0) // 0-100
+  tags         String[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  company     Company     @relation(fields: [companyId], references: [id])
+  department  Department? @relation(fields: [departmentId], references: [id])
+  tasks       Task[]
+  timeEntries TimeEntry[]
+  documents   Document[]
+}
+
+model Task {
+  id             String       @id @default(cuid())
+  projectId      String
+  assigneeId     String?
+  creatorId      String
+  title          String
+  description    String?
+  status         TaskStatus   @default(TODO)
+  priority       TaskPriority @default(MEDIUM)
+  dueDate        DateTime?
+  estimatedHours Decimal?
+  actualHours    Decimal?
+  completedAt    DateTime?
+  tags           String[]
+  dependencies   String[] // task IDs this task depends on
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  project     Project       @relation(fields: [projectId], references: [id])
+  assignee    Employee?     @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  creator     Employee      @relation("CreatedTasks", fields: [creatorId], references: [id])
+  timeEntries TimeEntry[]
+  comments    TaskComment[]
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id])
+}
+
+model TimeEntry {
+  id          String    @id @default(cuid())
+  employeeId  String
+  projectId   String?
+  taskId      String?
+  description String?
+  startTime   DateTime
+  endTime     DateTime?
+  duration    Int? // in minutes
+  billable    Boolean   @default(true)
+  hourlyRate  Decimal?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+  project  Project? @relation(fields: [projectId], references: [id])
+  task     Task?    @relation(fields: [taskId], references: [id])
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  projectId   String?
+  name        String
+  description String?
+  fileUrl     String
+  fileSize    Int
+  mimeType    String
+  version     String   @default("1.0")
+  tags        String[]
+  uploadedBy  String
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project? @relation(fields: [projectId], references: [id])
+}
+
+model Campaign {
+  id            String         @id @default(cuid())
+  companyId     String
+  name          String
+  description   String?
+  type          CampaignType
+  status        CampaignStatus @default(DRAFT)
+  targetSegment Json? // customer segmentation criteria
+  content       Json // campaign content/templates
+  budget        Decimal?
+  spent         Decimal        @default(0)
+  scheduledAt   DateTime?
+  startedAt     DateTime?
+  endedAt       DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  company   Company             @relation(fields: [companyId], references: [id])
+  analytics CampaignAnalytics[]
+}
+
+model CampaignAnalytics {
+  id          String   @id @default(cuid())
+  campaignId  String
+  date        DateTime @db.Date
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  conversions Int      @default(0)
+  revenue     Decimal  @default(0)
+  cost        Decimal  @default(0)
+  createdAt   DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id])
+
+  @@unique([campaignId, date])
+}
+
+model Report {
+  id          String     @id @default(cuid())
+  companyId   String
+  name        String
+  description String?
+  type        ReportType
+  parameters  Json // report configuration
+  data        Json // report results
+  generatedBy String
+  isPublic    Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+}
+
+model Integration {
+  id            String          @id @default(cuid())
+  companyId     String
+  name          String
+  type          IntegrationType
+  provider      String
+  configuration Json // API keys, endpoints, etc.
+  isActive      Boolean         @default(true)
+  lastSyncAt    DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, type, provider])
+}
+
+model APIKey {
+  id          String       @id @default(cuid())
+  companyId   String
+  name        String
+  keyHash     String       @unique // hashed API key
+  permissions Json // scoped permissions
+  status      APIKeyStatus @default(ACTIVE)
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdBy   String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+}
+
+model ProductBundle {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Decimal
+  discount    Decimal  @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items BundleItem[]
+}
+
+model BundleItem {
+  id        String  @id @default(cuid())
+  bundleId  String
+  productId String
+  quantity  Int     @default(1)
+  discount  Decimal @default(0)
+
+  bundle  ProductBundle @relation(fields: [bundleId], references: [id])
+  product Product       @relation(fields: [productId], references: [id])
+
+  @@unique([bundleId, productId])
+}
+
+model ProductAttribute {
+  id         String   @id @default(cuid())
+  name       String   @unique
+  type       String // text, number, boolean, select, multiselect
+  options    String[] // for select/multiselect types
+  isRequired Boolean  @default(false)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  values ProductAttributeValue[]
+}
+
+model ProductAttributeValue {
+  id          String @id @default(cuid())
+  productId   String
+  attributeId String
+  value       String
+
+  product   Product          @relation(fields: [productId], references: [id])
+  attribute ProductAttribute @relation(fields: [attributeId], references: [id])
+
+  @@unique([productId, attributeId])
+}
+
+model CustomerSegment {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  criteria    Json // segmentation rules
+  userCount   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members CustomerSegmentMember[]
+}
+
+model CustomerSegmentMember {
+  id        String @id @default(cuid())
+  segmentId String
+  userId    String
+
+  segment CustomerSegment @relation(fields: [segmentId], references: [id])
+
+  @@unique([segmentId, userId])
+}
+
+model LoyaltyProgram {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  description     String?
+  pointsPerDollar Decimal  @default(1)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  accounts LoyaltyAccount[]
+  rewards  LoyaltyReward[]
+}
+
+model LoyaltyAccount {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  programId      String
+  points         Int      @default(0)
+  lifetimePoints Int      @default(0)
+  tier           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User                 @relation(fields: [userId], references: [id])
+  program      LoyaltyProgram       @relation(fields: [programId], references: [id])
+  transactions LoyaltyTransaction[]
+}
+
+model LoyaltyTransaction {
+  id          String   @id @default(cuid())
+  accountId   String
+  points      Int // positive for earned, negative for redeemed
+  description String
+  orderId     String?
+  createdAt   DateTime @default(now())
+
+  account LoyaltyAccount @relation(fields: [accountId], references: [id])
+}
+
+model LoyaltyReward {
+  id          String   @id @default(cuid())
+  programId   String
+  name        String
+  description String?
+  pointsCost  Int
+  value       Decimal?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  program LoyaltyProgram @relation(fields: [programId], references: [id])
 }
