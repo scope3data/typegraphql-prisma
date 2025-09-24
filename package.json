@@ -103,10 +103,10 @@
   ],
   "lint-staged": {
     "**/*.{ts,tsx}": [
-      "prettier --write"
+      "prettier --ignore-path ./.cli.prettierignore --write"
     ],
     "**/*.{js,json}": [
-      "prettier --write"
+      "prettier --ignore-path ./.cli.prettierignore --write"
     ]
   },
   "private": true
