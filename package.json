@@ -1,12 +1,13 @@
 {
-  "name": "typegraphql-prisma",
+  "name": "@scope3/typegraphql-prisma",
   "version": "0.28.0",
   "scripts": {
     "prepare": "husky install",
-    "build": "tsc",
+    "prebuild": "rm -rf lib",
+    "build": "tsc -p tsconfig.build.json",
+    "postbuild": "chmod +x lib/generator.js",
     "prettier": "node ./node_modules/.bin/prettier",
-    "package:build": "./package.sh",
-    "package:publish": "cd package *&& npm publish",
+    "prepublishOnly": "npm run build",
     "check:type": "tsc --noEmit --skipLibCheck",
     "check:experiments:postgres": "cd ./experiments/postgres && tsc --noEmit --skipLibCheck",
     "check:experiments:mongodb": "cd ./experiments/mongodb && tsc --noEmit --skipLibCheck",
@@ -20,6 +21,11 @@
   "bin": {
     "typegraphql-prisma": "lib/generator.js"
   },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
   "peerDependencies": {
     "@prisma/client": "^5.18.0",
     "@types/graphql-fields": "^1.3.9",
@@ -109,5 +115,5 @@
       "prettier --ignore-path ./.cli.prettierignore --write"
     ]
   },
-  "private": true
+  "private": false
 }
